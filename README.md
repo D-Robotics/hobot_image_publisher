@@ -83,7 +83,7 @@ hbm_img_msgs为自定义消息格式，用于发布shared memory类型图像数�
   source ./install/local_setup.sh
   # config中为示例使用的图片文件，根据实际安装路径进行拷贝
   # 如果是板端编译（无--merge-install编译选项），拷贝命令为cp -r install/PKG_NAME/lib/PKG_NAME/config/ .，其中PKG_NAME为具体的package名
-  cp -r install/lib/hobot_audio/config/ .
+  cp -r install/lib/hobot_image_publisher/config/ .
   ```
   依次为读取文件夹/读取list文件/读取图片文件
   ```
@@ -99,7 +99,7 @@ hbm_img_msgs为自定义消息格式，用于发布shared memory类型图像数�
   ```
   # config中为示例使用的图片文件，根据实际安装路径进行拷贝
   # 如果是板端编译（无--merge-install编译选项），拷贝命令为cp -r install/PKG_NAME/lib/PKG_NAME/config/ .，其中PKG_NAME为具体的package名
-  cp -r install/lib/hobot_audio/config/ .
+  cp -r install/lib/hobot_image_publisher/config/ .
   ```
 
   1.效果展示，会启动hobot_codec以及websocket，显示图片于浏览器，在浏览器输入IP地址查看，效果见下方效果展示(websocket具体用法参考hobot_websocket)
