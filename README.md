@@ -1,7 +1,7 @@
 # hobot_image_publisher话题发布节点
 
 # 功能介绍
-hobot_image_publisher实现了通过参数配置实现不同的消息发布的方式的功能,发布消息格式类型为nv12
+hobot_image_publisher通过配置参数实现不同的发布方式，发布消息格式类型为nv12
 
 # 编译
 
@@ -64,14 +64,14 @@ hbm_img_msgs为自定义消息格式，用于发布shared memory类型图像数�
 | --------------- | ------------------- | ----------- | ------------------------------------------------------------ | -------- | ---------------------------- |
 | image_source      | 图片文件来源（文件夹/图片路径/list文件）      | std::string | 根据实际文件路径配置 | 否 | config/image/test1.jpg        |
 | image_format   |        文件格式      | std::string     |   jpeg/nv12                     |           是       | 无   |
-| msg_pub_topic_name     | 发布的话题名称 | std::string |      根据需要发布的话题名称设置                          | 否       | share_mem默认为"/hbmem_img";不使用share_mem默认为"/image_raw" |
+| msg_pub_topic_name     | 发布的话题名称 | std::string |      根据需要发布的话题名称设置                          | 否       | 使用share_mem默认为"/hbmem_img";不使用share_mem默认为"/image_raw" |
 | source_image_w     | 源图片的宽度   | int| 根据原始图片尺寸配置                                    | 否(若图片格式为nv12则必填)      | 原始图片尺寸 |
 | source_image_h     | 源图片的高度   | int | 根据原始图片尺寸配置                                   | 否(若图片格式为nv12则必填)     | 原始图片尺寸 |
 | output_image_w     | 输出的图片宽度 | int | 根据需要发布的图片分辨率设置                                   | 否        | 原始图片尺寸 |
 | output_image_h     | 输出的图片高度 | int | 根据需要发布的图片分辨率设置                                   | 否        | 原始图片尺寸 |
-| fps     | 图片发布帧率 | int | [1, 30]，在此范围外的配置表示不做帧率控制                                     | 否       | 10 |
+| fps     | 图片发布帧率 | int | [1, 30]，在此范围外不做帧率控制                                     | 否       | 10 |
 | is_loop     | 是否进行循环发布 | bool | true/false                                 | 否       | true |
-| is_shared_mem     | 是否使用is_share_mem的方式通信 | bool | true/false                                      | 否       | true |
+| is_shared_mem     | 是否使用share_mem的方式通信 | bool | true/false                                      | 否       | true |
 
 
 
@@ -80,18 +80,18 @@ hbm_img_msgs为自定义消息格式，用于发布shared memory类型图像数�
 - ros2 run运行(请将image_source更换成自己的文件路径)
   ```
   export COLCON_CURRENT_PREFIX=./install
-  source ./install/local_setup.sh
+  source ./install/local_setup.bash
   # config中为示例使用的图片文件，根据实际安装路径进行拷贝
   # 如果是板端编译（无--merge-install编译选项），拷贝命令为cp -r install/PKG_NAME/lib/PKG_NAME/config/ .，其中PKG_NAME为具体的package名
   cp -r install/lib/hobot_image_publisher/config/ .
   ```
   依次为读取文件夹/读取list文件/读取图片文件
   ```
-  ros2 run hobot_image_publisher hobot_image_pub --ros-args -p image_source:=config -p fps:=20 -p output_image_w:=960 -p output_image_h:=544 -p is_shared_mem:=true  -p image_format:=jpg -p source_image_w:=960 -p source_image_h:=544 -p is_loop:=true
+  ros2 run hobot_image_publisher hobot_image_pub --ros-args -p image_source:=./config -p fps:=5 -p output_image_w:=960 -p output_image_h:=544 -p image_format:=jpg -p source_image_w:=960 -p source_image_h:=544
 
-  ros2 run hobot_image_publisher hobot_image_pub --ros-args -p image_source:=config/img.list -p fps:=20 -p output_image_w:=960 -p output_image_h:=544 -p image_format:=jpg -p source_image_w:=960 -p source_image_h:=544
+  ros2 run hobot_image_publisher hobot_image_pub --ros-args -p image_source:=./config/img.list -p fps:=5 -p output_image_w:=960 -p output_image_h:=544 -p image_format:=jpg -p source_image_w:=960 -p source_image_h:=544
 
-  ros2 run hobot_image_publisher hobot_image_pub --ros-args -p image_source:=config/config/test1.jpg -p fps:=20 -p output_image_w:=960 -p output_image_h:=544 -p image_format:=jpg -p source_image_w:=960 -p source_image_h:=544
+  ros2 run hobot_image_publisher hobot_image_pub --ros-args -p image_source:=./config/test1.jpg -p fps:=5 -p output_image_w:=960 -p output_image_h:=544 -p image_format:=jpg -p source_image_w:=960 -p source_image_h:=544
 
   ```
 
@@ -102,18 +102,18 @@ hbm_img_msgs为自定义消息格式，用于发布shared memory类型图像数�
   cp -r install/lib/hobot_image_publisher/config/ .
   ```
 
-  1.效果展示，会启动hobot_codec以及websocket，显示图片于浏览器，在浏览器输入IP地址查看，效果见下方效果展示(websocket具体用法参考hobot_websocket)
+  1.效果展示，会启动hobot_codec以及websocket，图片显示于浏览器，请在浏览器中输入IP地址查看，效果见下方效果展示(websocket具体用法参考hobot_websocket)
   ```
   ros2 launch hobot_image_publisher hobot_image_publisher_demo.launch.py
   ```
 
-  2.单独使用hobot_image_publisher节点，该示例读取nv12格式图片，路径为相对路径，请按实际路径修改，发布话题为/test_msg，参数设置可参考该launch文件
+  2.单独使用hobot_image_publisher节点，该示例读取nv12格式图片，发布话题为/test_msg，参数设置可参考该launch文件
   ```
   ros2 launch hobot_image_publisher hobot_image_publisher.launch.py
   ```
 
 ## 注意事项
-- 需使用list指定图片文件，请编写config下的img.list，注意list文件一个图片路径为一行
+- 如需使用list指定图片文件，请编写config下的img.list，注意list文件编写格式:一个图片路径为一行
 - 可实现读取文件夹下特定格式的图片
 - 文件格式为nv12时，请输入原图片的分辨率，否则会报错
 - 目前支持帧率最高为15，超过此帧率无法支持
