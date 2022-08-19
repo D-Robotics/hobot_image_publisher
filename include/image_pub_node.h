@@ -25,9 +25,6 @@
 
 #include "hbm_img_msgs/msg/hbm_msg1080_p.hpp"
 
-#include "ai_msgs/msg/capture_targets.hpp"
-#include "ai_msgs/msg/perception_targets.hpp"
-
 #ifndef INCLUDE_IMAGE_PUB_NODE_H_
 #define INCLUDE_IMAGE_PUB_NODE_H_
 
