@@ -52,7 +52,7 @@ class PubNode : public rclcpp::Node {
   std::string msg_pub_topic_name_;
   std::string hbmem_pub_topic_ = "/hbmem_img";
   std::string ros_pub_topic_ = "/image_raw";
-  std::string image_source_ = "lib/hobot_image_publisher/config/test1.jpg";
+  std::string image_source_ = "./config/test1.jpg";
 
   int32_t source_image_w_ = 0;
   int32_t source_image_h_ = 0;

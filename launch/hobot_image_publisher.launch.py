@@ -12,7 +12,7 @@ def generate_launch_description():
             executable='hobot_image_pub',
             output='screen',
             parameters=[
-                {"image_source": "lib/hobot_image_publisher/config/test1.nv12"},
+                {"image_source": "./config/test1.nv12"},
                 {"image_format": "nv12"},
                 {"msg_pub_topic_name": "/test_msg"},
                 {"output_image_w": 960},
