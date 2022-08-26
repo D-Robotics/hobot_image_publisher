@@ -63,7 +63,7 @@ hbm_img_msgs为自定义消息格式，用于发布shared memory类型图像数�
 | 参数名          | 解释                | 类型        | 支持的配置                                                   | 是否必须 | 默认值                       |
 | --------------- | ------------------- | ----------- | ------------------------------------------------------------ | -------- | ---------------------------- |
 | image_source      | 图片文件来源（文件夹/图片路径/list文件）      | std::string | 根据实际文件路径配置 | 否 | config/image/test1.jpg        |
-| image_format   |        图片格式      | std::string     |   jpeg/jpg/png/nv12                     |           是       | 无   |
+| image_format   |        图片格式      | std::string     |   jpeg/jpg/png/nv12(图片格式必须与image_source中图片名后缀一致)                  |           是       | 无   |
 | msg_pub_topic_name     | 发布的话题名称 | std::string |      根据需要发布的话题名称设置                          | 否       | 使用share_mem默认为"/hbmem_img";不使用share_mem默认为"/image_raw" |
 | source_image_w     | 源图片的宽度   | int| 根据原始图片尺寸配置                                    | 否(若图片格式为nv12则必填)      | 原始图片尺寸 |
 | source_image_h     | 源图片的高度   | int | 根据原始图片尺寸配置                                   | 否(若图片格式为nv12则必填)     | 原始图片尺寸 |
@@ -73,7 +73,12 @@ hbm_img_msgs为自定义消息格式，用于发布shared memory类型图像数�
 | is_loop     | 是否进行循环发布 | bool | true/false                                 | 否       | true |
 | is_shared_mem     | 是否使用share_mem的方式通信 | bool | true/false                                      | 否       | true |
 
-
+## 注意事项
+- 如需使用list指定图片文件，请编写config下的img.list，注意list文件编写格式:一个图片路径为一行
+- 可实现读取文件夹下特定格式的图片
+- 文件格式为nv12时，请输入原图片的分辨率，否则会报错
+- 目前支持帧率最高为15，超过此帧率无法支持
+- 更换图片路径时，请确认参数image_format与图片格式匹配
 
 
 ## 运行
@@ -111,13 +116,6 @@ hbm_img_msgs为自定义消息格式，用于发布shared memory类型图像数�
   ```
   ros2 launch hobot_image_publisher hobot_image_publisher.launch.py
   ```
-
-## 注意事项
-- 如需使用list指定图片文件，请编写config下的img.list，注意list文件编写格式:一个图片路径为一行
-- 可实现读取文件夹下特定格式的图片
-- 文件格式为nv12时，请输入原图片的分辨率，否则会报错
-- 目前支持帧率最高为15，超过此帧率无法支持
-- 更换图片路径时，请确认参数image_format与图片格式匹配
 
 ## 效果展示
 test1.jpg
