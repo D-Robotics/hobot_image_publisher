@@ -1,5 +1,10 @@
 # Changelog for package hobot_image_publisher
 
+hhp_1.0.5RC1 (2022-08-26)
+------------------
+1. 调整README.md中注意事项的位置
+2. 增加参数说明中image_format的支持配置类型
+
 hhp_1.0.5 (2022-08-19)
 ------------------
 1. 支持图片数据批量发布功能
