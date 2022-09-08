@@ -19,7 +19,9 @@ def generate_launch_description():
                 {"output_image_h": 544},
                 {"source_image_w": 960},
                 {"source_image_h": 544},
-                {"fps": 5}
+                {"fps": 10},
+                {"is_loop": True},
+                {"is_shared_mem": True}
             ],
             arguments=['--ros-args', '--log-level', 'error']
         )

@@ -30,21 +30,23 @@
 int32_t BGRToNv12(const cv::Mat &bgr_mat, cv::Mat &img_nv12) {
   auto height = bgr_mat.rows;
   auto width = bgr_mat.cols;
-
   if (height % 2 || width % 2) {
-    std::cerr << "input img height and width must aligned by 2!";
+    RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+          "Image height and width must aligned by 2");
     return -1;
   }
   cv::Mat yuv_mat;
   cv::cvtColor(bgr_mat, yuv_mat, cv::COLOR_BGR2YUV_I420);
   if (yuv_mat.data == nullptr) {
-    std::cerr << "yuv_mat.data is null pointer" << std::endl;
+    RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+          "yuv_mat.data is null pointer");
     return -1;
   }
 
   auto *yuv = yuv_mat.ptr<uint8_t>();
   if (yuv == nullptr) {
-    std::cerr << "yuv is null pointer" << std::endl;
+    RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+          "yuv_mat.data is null pointer");
     return -1;
   }
   img_nv12 = cv::Mat(height * 3 / 2, width, CV_8UC1);
@@ -139,10 +141,18 @@ void processImage(ImageCache &image_cache, const std::string &image_source,
       rclcpp::shutdown();
       return;
     }
-    nv12_tmp = cv::Mat(source_image_h * 3 / 2, source_image_w, CV_8UC1);
     ifs.seekg(0, std::ios::end);
     int32_t len = ifs.tellg();
+    if(len != source_image_h * source_image_w * 3 / 2) {
+      RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+              "Parameters: source_image_w and source_image_h are set incorrectly!\n"
+              "The length of the nv12 file should be equal to source_image_h * source_image_w * 3 / 2 \n"
+              "Length of %s: %d",image_source.c_str(),len);
+      rclcpp::shutdown();
+      return;
+    }
     ifs.seekg(0, std::ios::beg);
+    nv12_tmp = cv::Mat(source_image_h * 3 / 2, source_image_w, CV_8UC1);
     auto *nv12_data_ptr = reinterpret_cast<char *>(nv12_tmp.ptr<uint8_t>());
     ifs.read(nv12_data_ptr, len);
     ifs.close();
@@ -155,10 +165,16 @@ void processImage(ImageCache &image_cache, const std::string &image_source,
   int32_t ori_height = (image_format == "nv12") ? source_image_h : bgr_mat.rows;
   int32_t pad_width = (output_image_w == 0) ? ori_width : output_image_w;
   int32_t pad_height = (output_image_h == 0) ? ori_height : output_image_h;
-
+  if ((pad_width <= 0) || (pad_height <= 0)) {
+    RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+    "Parameters: output_image_w and output_image_h are set incorrectly!");
+    rclcpp::shutdown();
+    return;
+  }
   // 根据配置参数改变图片分辨率以及格式转换
   cv::Mat pad_frame(pad_height, pad_width, CV_8UC3, cv::Scalar::all(0));
   cv::Mat& nv12_mat = image_cache.nv12_mat;
+
   if (ori_width != pad_width || ori_height != pad_height) {
     if (image_format == "nv12") {
       cv::cvtColor(nv12_tmp, bgr_mat, CV_YUV2BGR_NV12);
@@ -169,14 +185,10 @@ void processImage(ImageCache &image_cache, const std::string &image_source,
     pad_frame = bgr_mat;
   }
   if (image_format == "nv12" &&
-      (ori_width == pad_width || ori_height == pad_height)) {
+      (ori_width == pad_width && ori_height == pad_height)) {
     nv12_mat = nv12_tmp;
   } else {
     auto ret = BGRToNv12(pad_frame, nv12_mat);
-    auto *ptr = reinterpret_cast<char *>(nv12_mat.ptr<int8_t>());
-    std::ofstream yfile("test1.nv12",std::ios::out | std::ios::binary);
-    yfile.write(ptr ,pad_width * pad_height * 3 / 2);
-    yfile.close();
     if (ret) {
       RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
           "Image: %s get nv12 image failed", image_source.c_str());
@@ -184,7 +196,6 @@ void processImage(ImageCache &image_cache, const std::string &image_source,
       return;
     }
   }
-
   image_cache.img_data = nv12_mat.data;
   image_cache.data_len = pad_width * pad_height * 3 / 2;
   image_cache.width = pad_width;
@@ -219,36 +230,64 @@ PubNode::PubNode(const std::string &node_name,
   this->get_parameter<std::string>("msg_pub_topic_name",
                                        msg_pub_topic_name_);
 
-  if ((source_image_w_ == 0 || source_image_h_ == 0) &&
-          image_format_ == "nv12") {
+  if (image_format_.size() == 0){
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
-          "Your file format is nv12, please enter the width and height");
+          "Please add parameter: image_format to your command!");
+    rclcpp::shutdown();
+    return;
+  } else {
+    if ((source_image_w_ == 0 || source_image_h_ == 0) &&
+            image_format_ == "nv12") {
+      RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+            "Your image format is nv12. Please add parameters:source_image_w and source_image_h to your command!");
+      rclcpp::shutdown();
+      return;
+    }
+  }
+  if (fps_ <= 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+    "Parameter: fps setting error!");
     rclcpp::shutdown();
     return;
   }
 
   int32_t type = checkPathType(image_source_);
   if (type == 1) {
-    if (image_source_.find(image_format_, 0) != std::string::npos) {
+    std::string file_extension = image_source_.substr(image_source_.find_last_of('.') + 1);
+    if (image_format_ == file_extension) {
       // 路径为图片文件
       processImage(image_cache_, image_source_, output_image_w_,
       output_image_h_, source_image_w_, source_image_h_, image_format_);
-    } else if (image_source_.find("list", 0) != std::string::npos) {
+    } else if (file_extension == "list") {
       // 路径为list文件
       std::string list_tmp;
-      // std::ifstream list_ifs (image_source_, std::ios::in);
       std::fstream list_ifs(image_source_);
       assert(list_ifs.is_open());
       while (getline(list_ifs, list_tmp)) {
-        data_list_.push_back(list_tmp);
+        std::string list_file_extension = list_tmp.substr(list_tmp.find_last_of('.') + 1);
+        if (list_file_extension == image_format_) {
+          data_list_.push_back(list_tmp);
+        }
       }
       list_ifs.close();
+      if (data_list_.size() == 0) {
+      RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+                "The image with format %s cannot be found in %s",
+                image_format_.c_str(),image_source_.c_str());
+      rclcpp::shutdown();
+      return;
+      }
     } else {
       RCLCPP_ERROR(
         rclcpp::get_logger("image_pub_node"),
-                "There is no matching file in your path");
-        rclcpp::shutdown();
-        return;
+                "There is no matching file in your path\n"
+                "image_source: %s\n"
+                "image_format: %s\n"
+                "You can try changing the image_format to: %s",
+                image_source_.c_str(),image_format_.c_str(),file_extension.c_str()
+                );
+      rclcpp::shutdown();
+      return;
     }
   } else if (type == 0) {
     // 路径为文件夹
@@ -262,18 +301,19 @@ PubNode::PubNode(const std::string &node_name,
     }
     while ((ptr = readdir(pDir)) != 0) {
       std::string file_name(ptr->d_name);
+      std::string file_extension = file_name.substr(file_name.find_last_of('.') + 1);
       if ((strcmp(ptr->d_name, ".") != 0) && (strcmp(ptr->d_name, "..") != 0)
-            && (file_name.find(image_format_, 0) != std::string::npos)) {
+            && (image_format_ == file_extension)) {
         data_list_.push_back(image_source_ + "/" + ptr->d_name);
       }
     }
     closedir(pDir);
     if (data_list_.size() == 0) {
-      RCLCPP_ERROR(
-        rclcpp::get_logger("image_pub_node"),
-                "There is no matching file in your path");
-        rclcpp::shutdown();
-        return;
+    RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+              "The image with format %s cannot be found in %s",
+              image_format_.c_str(),image_source_.c_str());
+    rclcpp::shutdown();
+    return;
     }
   }
 
@@ -353,7 +393,6 @@ void PubNode::timer_callback() {
       ros_pub_topic_.data());
     ros_publisher_->publish(msg);
   }
-
   // 处理循环
   pub_index++;
   if (is_loop_ == true) {
