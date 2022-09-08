@@ -25,9 +25,14 @@ def generate_launch_description():
             executable='hobot_image_pub',
             output='screen',
             parameters=[
+                {"image_source": "./config/test1.jpg"},
                 {"image_format": "jpg"},
+                {"msg_pub_topic_name": "/hbmem_img"},
                 {"output_image_w": 960},
                 {"output_image_h": 544},
+                {"fps": 10},
+                {"is_loop": True},
+                {"is_shared_mem": True}
             ],
             arguments=['--ros-args', '--log-level', 'error']
         ),
