@@ -32,7 +32,8 @@ int32_t BGRToNv12(const cv::Mat &bgr_mat, cv::Mat &img_nv12) {
   auto width = bgr_mat.cols;
   if (height % 2 || width % 2) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
-          "Image height and width must aligned by 2");
+          "Image height and width must aligned by 2\n"
+          "height: %d \nwidth: %d", height, width);
     return -1;
   }
   cv::Mat yuv_mat;
@@ -147,7 +148,8 @@ void processImage(ImageCache &image_cache, const std::string &image_source,
       RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
               "Parameters: source_image_w and source_image_h are set incorrectly!\n"
               "The length of the nv12 file should be equal to source_image_h * source_image_w * 3 / 2 \n"
-              "Length of %s: %d",image_source.c_str(),len);
+              "Length of %s: %d \nsource_image_h: %d \nsource_image_w: %d",
+              image_source.c_str(),len,source_image_h,source_image_w);
       rclcpp::shutdown();
       return;
     }
@@ -167,7 +169,9 @@ void processImage(ImageCache &image_cache, const std::string &image_source,
   int32_t pad_height = (output_image_h == 0) ? ori_height : output_image_h;
   if ((pad_width <= 0) || (pad_height <= 0)) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
-    "Parameters: output_image_w and output_image_h are set incorrectly!");
+    "Parameters: output_image_w and output_image_h are set incorrectly! "
+    "output_image_w and output_image_h should be greater than 0!\n"
+    "output_image_w :%d \noutput_image_h :%d", output_image_w ,output_image_h);
     rclcpp::shutdown();
     return;
   }
@@ -232,21 +236,24 @@ PubNode::PubNode(const std::string &node_name,
 
   if (image_format_.size() == 0){
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
-          "Please add parameter: image_format to your command!");
+          "Please add parameter: image_format to your command!\n"
+          "Example: -p image_format:=jpeg/jpg/png/nv12");
     rclcpp::shutdown();
     return;
   } else {
     if ((source_image_w_ == 0 || source_image_h_ == 0) &&
             image_format_ == "nv12") {
       RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
-            "Your image format is nv12. Please add parameters:source_image_w and source_image_h to your command!");
+            "Your image format is nv12. Please add parameters:source_image_w and source_image_h to your command!\n"
+            "Example: -p source_image_w:=<source_image_w>  -p source_image_h:=<source_image_h>");
       rclcpp::shutdown();
       return;
     }
   }
-  if (fps_ <= 0) {
+  if (fps_ <= 0 || fps_>30) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
-    "Parameter: fps setting error!");
+    "Parameter: fps setting error! fps should be greater than 0 and less than 30!\n"
+    "Fps: %d\n",fps_);
     rclcpp::shutdown();
     return;
   }
