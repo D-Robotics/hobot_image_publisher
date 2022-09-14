@@ -1,5 +1,9 @@
 # Changelog for package hobot_image_publisher
 
+hhp_1.1.1 (2022-09-14)
+------------------
+1. 优化hobot_image_publisher log输出
+
 hhp_1.0.5RC1 (2022-08-26)
 ------------------
 1. 调整README.md中注意事项的位置
