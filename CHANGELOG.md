@@ -1,6 +1,6 @@
 # Changelog for package hobot_image_publisher
 
-hhp_1.1.1 (2022-09-14)
+tros_1.1.1 (2022-09-15)
 ------------------
 1. 优化hobot_image_publisher log输出
 
