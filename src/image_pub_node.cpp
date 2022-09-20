@@ -165,12 +165,12 @@ void processImage(ImageCache &image_cache, const std::string &image_source,
   // 根据配置参数获取分辨率
   int32_t ori_width = (image_format == "nv12") ? source_image_w : bgr_mat.cols;
   int32_t ori_height = (image_format == "nv12") ? source_image_h : bgr_mat.rows;
-  int32_t pad_width = (output_image_w == std::numeric_limits<int>::max()) ? ori_width : output_image_w;
-  int32_t pad_height = (output_image_h == std::numeric_limits<int>::max()) ? ori_height : output_image_h;
-  if ((pad_width <= 0) || (pad_height <= 0)) {
+  int32_t pad_width = (output_image_w == 0) ? ori_width : output_image_w;
+  int32_t pad_height = (output_image_h == 0) ? ori_height : output_image_h;
+  if ((pad_width < 0) || (pad_height < 0)) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
     "Parameters: output_image_w and output_image_h are set incorrectly! "
-    "output_image_w and output_image_h should be greater than 0!\n"
+    "output_image_w and output_image_h should not be negative!\n"
     "output_image_w :%d \noutput_image_h :%d", output_image_w ,output_image_h);
     rclcpp::shutdown();
     return;

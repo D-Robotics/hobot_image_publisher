@@ -56,8 +56,8 @@ class PubNode : public rclcpp::Node {
 
   int32_t source_image_w_ = 0;
   int32_t source_image_h_ = 0;
-  int32_t output_image_w_ = std::numeric_limits<int>::max();
-  int32_t output_image_h_ = std::numeric_limits<int>::max();
+  int32_t output_image_w_ = 0;
+  int32_t output_image_h_ = 0;
   int32_t fps_ = 10;
 
   bool is_shared_mem_ = true;

@@ -67,8 +67,8 @@ hbm_img_msgs为自定义消息格式，用于发布shared memory类型图像数�
 | msg_pub_topic_name     | 发布的话题名称 | std::string |      根据需要发布的话题名称设置                          | 否       | 使用share_mem默认为"/hbmem_img";不使用share_mem默认为"/image_raw" |
 | source_image_w     | 源图片的宽度   | int| 根据原始图片尺寸配置                                    | 否(若图片格式为nv12则必填)      | 原始图片尺寸 |
 | source_image_h     | 源图片的高度   | int | 根据原始图片尺寸配置                                   | 否(若图片格式为nv12则必填)     | 原始图片尺寸 |
-| output_image_w     | 输出的图片宽度 | int | 根据需要发布的图片分辨率设置                                   | 否        | 原始图片尺寸 |
-| output_image_h     | 输出的图片高度 | int | 根据需要发布的图片分辨率设置                                   | 否        | 原始图片尺寸 |
+| output_image_w     | 输出的图片宽度 | int | 根据需要发布的图片分辨率设置                                   | 否        | 0 |
+| output_image_h     | 输出的图片高度 | int | 根据需要发布的图片分辨率设置                                   | 否        | 0 |
 | fps     | 图片发布帧率 | int | [1, 30]，在此范围外不做帧率控制                                     | 否       | 10 |
 | is_loop     | 是否进行循环发布 | bool | True/False                                 | 否       | True |
 | is_shared_mem     | 是否使用share_mem的方式通信 | bool | True/False                                      | 否       | True |
@@ -79,7 +79,7 @@ hbm_img_msgs为自定义消息格式，用于发布shared memory类型图像数�
 - 文件格式为nv12时，请输入原图片的分辨率，否则会报错
 - 目前支持帧率最高为15，超过此帧率无法支持
 - 更换图片路径时，请确认参数image_format与图片格式匹配
-
+- 当参数output_image_w和output_image_h设置为0或不设置时，不改变图像分辨率
 
 ## 运行
 - ros2 run运行(请将image_source更换成自己的文件路径)
