@@ -167,10 +167,10 @@ void processImage(ImageCache &image_cache, const std::string &image_source,
   int32_t ori_height = (image_format == "nv12") ? source_image_h : bgr_mat.rows;
   int32_t pad_width = (output_image_w == 0) ? ori_width : output_image_w;
   int32_t pad_height = (output_image_h == 0) ? ori_height : output_image_h;
-  if ((pad_width <= 0) || (pad_height <= 0)) {
+  if ((pad_width < 0) || (pad_height < 0)) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
     "Parameters: output_image_w and output_image_h are set incorrectly! "
-    "output_image_w and output_image_h should be greater than 0!\n"
+    "output_image_w and output_image_h should not be negative!\n"
     "output_image_w :%d \noutput_image_h :%d", output_image_w ,output_image_h);
     rclcpp::shutdown();
     return;
@@ -246,6 +246,15 @@ PubNode::PubNode(const std::string &node_name,
       RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
             "Your image format is nv12. Please add parameters:source_image_w and source_image_h to your command!\n"
             "Example: -p source_image_w:=<source_image_w>  -p source_image_h:=<source_image_h>");
+      rclcpp::shutdown();
+      return;
+    }
+    if((image_format_ != "jpeg") && (image_format_ != "jpg") &&
+            (image_format_ != "nv12") &&(image_format_ != "png")) {
+      RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+          "Parameter: image_format setting error! Only jpeg/jpg/png/nv12 is supported\n"
+          "image_format: %s\n"
+          "Example: -p image_format:=jpeg/jpg/png/nv12",image_format_.c_str());
       rclcpp::shutdown();
       return;
     }
