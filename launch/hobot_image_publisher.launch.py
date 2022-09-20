@@ -6,7 +6,7 @@ from launch.substitutions import LaunchConfiguration
 def generate_launch_description():
     
     return LaunchDescription([
-        # 启动图片发布pkg
+        # 启动图片发布pkg，output_image_w与output_image_h设置为0代表不改变图片的分辨率
         Node(
             package='hobot_image_publisher',
             executable='hobot_image_pub',

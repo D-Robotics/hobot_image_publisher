@@ -249,6 +249,15 @@ PubNode::PubNode(const std::string &node_name,
       rclcpp::shutdown();
       return;
     }
+    if((image_format_ != "jpeg") && (image_format_ != "jpg") &&
+            (image_format_ != "nv12") &&(image_format_ != "png")) {
+      RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+          "Parameter: image_format setting error! Only jpeg/jpg/png/nv12 is supported\n"
+          "image_format: %s\n"
+          "Example: -p image_format:=jpeg/jpg/png/nv12",image_format_.c_str());
+      rclcpp::shutdown();
+      return;
+    }
   }
   if (fps_ <= 0 || fps_>30) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
