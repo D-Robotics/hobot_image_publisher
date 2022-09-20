@@ -1,5 +1,9 @@
 # Changelog for package hobot_image_publisher
 
+tros_1.1.1RC1 (2022-09-20)
+------------------
+1. 解决当设置输出分辨率为0时没有报错的问题
+
 tros_1.1.1 (2022-09-15)
 ------------------
 1. 优化hobot_image_publisher log输出
