@@ -16,14 +16,30 @@
 #include <string>
 #include <vector>
 
+#include "hbm_img_msgs/msg/hbm_h26_x_frame.hpp"
+#include "hbm_img_msgs/msg/hbm_msg1080_p.hpp"
+#include "img_msgs/msg/h26_x_frame.hpp"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
-
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/image.hpp"
 
-#include "hbm_img_msgs/msg/hbm_msg1080_p.hpp"
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/avutil.h>
+#include <libavutil/hwcontext.h>
+#include <libavutil/imgutils.h>
+// #include <libavutil/log.h>
+#include <libavutil/opt.h>
+#include <libavutil/time.h>
+#include <libswresample/swresample.h>
+#ifdef __cplusplus
+}
+#endif
 
 #ifndef INCLUDE_IMAGE_PUB_NODE_H_
 #define INCLUDE_IMAGE_PUB_NODE_H_
@@ -31,18 +47,32 @@
 struct ImageCache {
   std::string image_;
   cv::Mat nv12_mat;
-  uint8_t* img_data = nullptr;
+  uint8_t *img_data = nullptr;
   int32_t width = 0;
   int32_t height = 0;
   int32_t data_len = 0;
   int32_t count_ = 0;
 };
 
+struct VideoCache {
+  std::string video_file_;    // 视频文件名
+  std::string stream_codec_;  // 视频流编码格式 h264/h265
+  AVFormatContext *fmt_ctx = nullptr;
+  int video_stream_index = 0;  //文件中视频流index
+  double fps;                  // 视频发布帧率
+  int32_t width = 0;
+  int32_t height = 0;
+  uint32_t count_ = 0;  //发布的视频帧count
+};
+
+struct StrTypesList {
+  std::vector<std::string> list;
+};
 
 class PubNode : public rclcpp::Node {
  public:
   PubNode(const std::string &node_name,
-                 const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
+          const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
   ~PubNode() override;
 
  private:
@@ -62,16 +92,37 @@ class PubNode : public rclcpp::Node {
 
   bool is_shared_mem_ = true;
   bool is_loop_ = true;
+  bool is_pub_video = false;
+  uint32_t pub_index = 0;
 
-  ImageCache image_cache_;
+  ImageCache image_cache_;  // 保存当前发布的图片信息
+  VideoCache video_cache_;  // 保存当前发布的视频编码参数，fps，分辨率等
 
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::PublisherHbmem<hbm_img_msgs::msg::HbmMsg1080P>::SharedPtr
-                  publisher_hbmem_ = nullptr;
-  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr
-                  ros_publisher_ = nullptr;
+      publisher_hbmem_ = nullptr;
+  rclcpp::PublisherHbmem<hbm_img_msgs::msg::HbmH26XFrame>::SharedPtr
+      publisher_hbmem_h26x_ = nullptr;
 
+  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr ros_publisher_ =
+      nullptr;
+  rclcpp::Publisher<img_msgs::msg::H26XFrame>::SharedPtr ros_publisher_h26x_ =
+      nullptr;
+
+  // 以固定帧率发布图片
   void timer_callback();
+
+  // 设置pub_index，用于确定循环发布时，多个图片/视频中的哪一个
+  void set_pub_index();
+
+  // 获取video信息，fps，分辨率，视频编码格式等
+  int get_video_cache(const std::string &video_file);
+
+  //发布h264、h265类型的topic
+  void pub_h26x();
+
+  // 从MP4文件中提取并拼接h264视频流，然后发布h264类型的topic
+  void pub_H264FromMP4();
 };
 
 #endif  // INCLUDE_IMAGE_PUB_NODE_H_
