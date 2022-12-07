@@ -33,7 +33,6 @@ extern "C" {
 #include <libavutil/avutil.h>
 #include <libavutil/hwcontext.h>
 #include <libavutil/imgutils.h>
-// #include <libavutil/log.h>
 #include <libavutil/opt.h>
 #include <libavutil/time.h>
 #include <libswresample/swresample.h>
