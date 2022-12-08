@@ -33,6 +33,7 @@ extern "C" {
 #include <libavutil/avutil.h>
 #include <libavutil/hwcontext.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/log.h>
 #include <libavutil/opt.h>
 #include <libavutil/time.h>
 #include <libswresample/swresample.h>
@@ -53,20 +54,26 @@ struct ImageCache {
   int32_t count_ = 0;
 };
 
-struct VideoCache {
+struct VideoInfo {
   std::string video_file_;    // 视频文件名
   std::string stream_codec_;  // 视频流编码格式 h264/h265
   AVFormatContext *fmt_ctx = nullptr;
   int video_stream_index = 0;  //文件中视频流index
-  double fps;                  // 视频发布帧率
+  float fps;                   // 视频发布帧率
   int32_t width = 0;
   int32_t height = 0;
   uint32_t count_ = 0;  //发布的视频帧count
 };
 
-struct StrTypesList {
-  std::vector<std::string> list;
-};
+/**
+ * 根据传入的ffmpeg错误码获取错误信息
+ * @param[in] errnum: ffmpeg的错误码
+ * @return 错误信息字符串
+ */
+inline char *av_err2str_(int errnum) {
+  char tmp[AV_ERROR_MAX_STRING_SIZE] = {0};
+  return av_make_error_string(tmp, AV_ERROR_MAX_STRING_SIZE, errnum);
+}
 
 class PubNode : public rclcpp::Node {
  public:
@@ -95,16 +102,21 @@ class PubNode : public rclcpp::Node {
   uint32_t pub_index = 0;
 
   ImageCache image_cache_;  // 保存当前发布的图片信息
-  VideoCache video_cache_;  // 保存当前发布的视频编码参数，fps，分辨率等
+  VideoInfo video_info_;  // 保存当前发布的视频编码参数，fps，分辨率等
 
   rclcpp::TimerBase::SharedPtr timer_;
+
+  // 用于shared_mem方式发布图片
   rclcpp::PublisherHbmem<hbm_img_msgs::msg::HbmMsg1080P>::SharedPtr
       publisher_hbmem_ = nullptr;
+  // 用于shared_mem方式发布h26x视频流
   rclcpp::PublisherHbmem<hbm_img_msgs::msg::HbmH26XFrame>::SharedPtr
       publisher_hbmem_h26x_ = nullptr;
 
+  //用于ros方式发布图片
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr ros_publisher_ =
       nullptr;
+  //用于ros方式发布h26x视频流
   rclcpp::Publisher<img_msgs::msg::H26XFrame>::SharedPtr ros_publisher_h26x_ =
       nullptr;
 
@@ -115,7 +127,9 @@ class PubNode : public rclcpp::Node {
   void set_pub_index();
 
   // 获取video信息，fps，分辨率，视频编码格式等
-  int get_video_cache(const std::string &video_file);
+  // 输入参数为video文件的路径，获取的文件信息保存在类成员video_info_中
+  // 成功返回0，失败返回-1
+  int get_video_info(const std::string &video_file);
 
   //发布h264、h265类型的topic
   void pub_h26x();

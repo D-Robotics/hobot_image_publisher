@@ -1,7 +1,11 @@
 # hobot_image_publisher话题发布节点
 
 # 功能介绍
-hobot_image_publisher通过配置参数实现图片数据和视频数据的发布。发布图片时，消息类型为nv12。发布视频时，消息类型根据视频流的编码格式而定。当前支持发布的图片格式有"jpeg", "jpg", "nv12", "png"，视频格式有"mp4", "h264", "h265"。
+hobot_image_publisher通过配置参数实现图片数据和视频数据的发布。
+
+1. 当前支持发布的图片格式有"jpeg", "jpg", "nv12", "png"。发布图片时，topic编码类型为nv12。
+2. 当前支持发布的视频格式有"mp4", "h264", "h265"。发布h264/h265格式视频时，topic编码类型就是视频格式h264/h265。
+   发布mp4格式视频时，hobot_image_publisher会从mp4文件中提取h264视频码流后再发布，发布的topic编码类型为h264。
 
 # 编译
 
@@ -26,7 +30,7 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
 
 ### X3 Ubuntu系统上编译
 
-1、编译环境确认
+1. 编译环境确认
   - 板端已安装X3 Ubuntu系统。
   - 当前编译终端已设置TogetherROS环境变量：`source PATH/setup.bash`。其中PATH为TogetherROS的安装路径。
   - 已安装ROS2编译工具colcon。安装的ROS不包含编译工具colcon，需要手动安装colcon。colcon安装命令：`pip install -U colcon-common-extensions`
@@ -77,15 +81,14 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
 | is_shared_mem      | 是否使用share_mem的方式通信            | bool        | True/False                                      | 否       | True |
 
 ## 注意事项
-- 如需使用list指定图片或视频文件，请编写config下的img.list或video.list，注意list文件编写格式:一个文件路径为一行
+- 如需使用list指定图片或视频文件，请编写config下的img.list或video.list，注意list文件编写格式:一个文件路径为一行。
+- 使用list文件时，list中的文件格式需要与参数image_format保持一致。发布nv12图片时，list中的图片分辨率需要与输入的分辨率保持一致。
 - 可实现读取文件夹下特定格式的图片、视频
 - 文件格式为nv12时，请输入原图片的分辨率，否则会报错
 - 目前支持帧率最高为15，超过此帧率无法支持
 - 更换图片/视频路径时，请确认参数image_format与图片/视频格式匹配
 - 当参数output_image_w和output_image_h设置为0或不设置时，不改变图像分辨率
-- 发布视频时，hobot_image_publisher会自动视频的分辨率，所以不关心source_image_w和source_image_h的输入值
-- 不支持视频分辨率的更改即输出分辨率等于输入分辨率，所以发布视频时不关心output_image_w和output_image_h的值
-- 发布mp4格式视频时，hobot_image_publisher会提取mp4文件中的h264码流，所以发布的topic编码类型为h264
+- 发布视频时，hobot_image_publisher会自动获取视频的分辨率，且不支持分辨率更改，分辨率配置无效
 
 ## 运行
 - ros2 run运行(请将image_source更换成自己的文件路径)
@@ -96,16 +99,24 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
   # 如果是板端编译（无--merge-install编译选项），拷贝命令为cp -r install/PKG_NAME/lib/PKG_NAME/config/ .，其中PKG_NAME为具体的package名
   cp -r install/lib/hobot_image_publisher/config/ .
   ```
-  依次为读取文件夹/读取图片list文件/读取图片文件/读取视频list文件/读取视频文件
+  读取文件夹中所有格式为jpg的图片，并以帧率为5的频率发布nv12图片数据
   ```
   ros2 run hobot_image_publisher hobot_image_pub --ros-args -p image_source:=./config -p fps:=5 -p output_image_w:=960 -p output_image_h:=544 -p image_format:=jpg -p source_image_w:=960 -p source_image_h:=544
-
+  ```
+  读取img.list文件，获取img.list中列出的所有格式为jpg的图片路径，发布nv12图片数据，帧率为5
+  ```
   ros2 run hobot_image_publisher hobot_image_pub --ros-args -p image_source:=./config/img.list -p fps:=5 -p output_image_w:=960 -p output_image_h:=544 -p image_format:=jpg -p source_image_w:=960 -p source_image_h:=544
-
+  ```
+  读取./config/test1.jpg图片并发布，发布帧率为5
+  ```
   ros2 run hobot_image_publisher hobot_image_pub --ros-args -p image_source:=./config/test1.jpg -p fps:=5 -p output_image_w:=960 -p output_image_h:=544 -p image_format:=jpg -p source_image_w:=960 -p source_image_h:=544
-
+  ```
+  读取视频list文件video.list，获取video.list中列出的所有格式为mp4的视频文件路径，并发布视频topic，topic类型为h264
+  ```
   ros2 run hobot_image_publisher hobot_image_pub --ros-args -p image_source:=./config/video.list -p fps:=30 -p image_format:=mp4
-
+  ```
+  读取视频文件test1.h264，视频格式为h264，发布h264视频流topic
+  ```
   ros2 run hobot_image_publisher hobot_image_pub --ros-args -p image_source:=./config/test1.h264 -p fps:=30 -p image_format:=h264
 
   ```
@@ -127,14 +138,15 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
   ros2 launch hobot_image_publisher hobot_image_publisher.launch.py
   ```
 
-  3.视频发布效果展示，会启动hobot_codec以及websocket，视频显示于浏览器，请在浏览器中输入IP地址查看，效果见下方效果展示(websocket具体用法参考hobot_websocket)
+  3.视频发布效果展示，会启动hobot_codec以及websocket，视频显示于浏览器，请在浏览器中输入IP地址查看，效果见下方效果展示(websocket具体用法参考hobot_websocket)。该示例读取video.list文件，并循环发布视频，发布话题为/hbmem_img，参数设置可参考该launch文件
+  
   ```
-  ros2 launch hobot_image_publisher hobot_image_publisher_mp4.launch.py
+  ros2 launch hobot_image_publisher hobot_image_publisher_videolist_demo.launch.py
   ```
 
   4.单独使用hobot_image_publisher节点，该示例读取h264格式图片，发布话题为/test_h264，参数设置可参考该launch文件
   ```
-  ros2 launch hobot_image_publisher hobot_image_publisher_h264.launch.py
+  ros2 launch hobot_image_publisher hobot_image_publisher_video_demo.launch.py
   ```
 
 ## 效果展示

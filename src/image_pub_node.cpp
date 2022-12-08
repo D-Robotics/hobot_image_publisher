@@ -38,13 +38,19 @@
 uint8_t startCode[4] = {0x00, 0x00, 0x00, 0x01};
 
 // hobot_image_publisher支持发布的格式，包括图片格式和视频格式
-StrTypesList format_list = {
+std::vector<std::string> format_list = {
     {"jpeg", "jpg", "nv12", "png", "mp4", "h264", "h265"}};
 
 // hobot_image_publisher支持发布的视频格式
-StrTypesList video_list = {{"mp4", "h264", "h265"}};
+std::vector<std::string> video_list = {{"mp4", "h264", "h265"}};
 
-// 判断tsType是否是fmtTypes中的成员
+/**
+ * @brief 判断输入的类型tsType是否是类型集合fmtTypes中成员的工具函数
+ * @param[in] tsType ：需要判断的类型
+ * @param[in] fmtTypes ：所有类型的集合
+ * @return true：tsType是fmtTypes中的成员
+ * @return false tsType不是fmtTypes中的成员
+ */
 static bool IsType(const char *tsType,
                    const std::vector<std::string> &fmtTypes) {
   for (uint32_t nIdx = 0; nIdx < fmtTypes.size(); ++nIdx) {
@@ -54,7 +60,14 @@ static bool IsType(const char *tsType,
 }
 
 //获取vector成员拼接的string，此处用于输出所有支持的类型，便于动态维护
-static std::string getStringFromVec(const std::vector<std::string> &fmtTypes) {
+/**
+ * @brief Get the String From Vec object
+ *        将vector中所有string成员重新拼接成一个新的string，每个成员之间用字符'/'隔开
+ * @param fmtTypes ：
+ * @return std::string 拼接后的string
+ */
+static std::string SpliceStringFromVec(
+    const std::vector<std::string> &fmtTypes) {
   std::string str = "";
   for (uint32_t i = 0; i < fmtTypes.size(); ++i) {
     str.append(fmtTypes[i]);
@@ -265,7 +278,7 @@ void processImage(ImageCache &image_cache,
 }
 
 // 获取video信息，fps，分辨率，视频编码格式等
-int PubNode::get_video_cache(const std::string &file) {
+int PubNode::get_video_info(const std::string &file) {
   if (access(file.c_str(), R_OK) == -1) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
                  "Video file: %s not exist!",
@@ -276,30 +289,31 @@ int PubNode::get_video_cache(const std::string &file) {
 
   //打开video文件，获取context
   int ret =
-      avformat_open_input(&(video_cache_.fmt_ctx), file.c_str(), NULL, NULL);
+      avformat_open_input(&(video_info_.fmt_ctx), file.c_str(), NULL, NULL);
   if (ret < 0) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
-                 "open file failed, %s",
-                 file.c_str());
+                 "open file failed: %s, %s",
+                 file.c_str(),
+                 av_err2str_(ret));
     rclcpp::shutdown();
     return -1;
   }
-  video_cache_.video_file_ = file;
+  video_info_.video_file_ = file;
   RCLCPP_INFO(rclcpp::get_logger("image_pub_node"),
               "open video file: %s",
               file.c_str());
   // 查找stream信息
-  ret = avformat_find_stream_info(video_cache_.fmt_ctx, NULL);
+  ret = avformat_find_stream_info(video_info_.fmt_ctx, NULL);
   if (ret < 0) {
     RCLCPP_WARN(rclcpp::get_logger("image_pub_node"),
-                "Cannot find stream info: %s. [AV_ERROR]: %d",
+                "Cannot find stream info: %s. [AV_ERROR]: %s",
                 file.c_str(),
-                ret);
+                av_err2str_(ret));
   }
 
   // 寻找video中视频流
-  video_cache_.video_stream_index = av_find_best_stream(
-      video_cache_.fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
+  video_info_.video_stream_index = av_find_best_stream(
+      video_info_.fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
   if (ret < 0) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
                  "Cannot find a video stream in the input file: %s",
@@ -310,33 +324,36 @@ int PubNode::get_video_cache(const std::string &file) {
 
   //获取视频帧率fps
   const AVStream *stream =
-      video_cache_.fmt_ctx->streams[video_cache_.video_stream_index];
-  double fps_temp = av_q2d(stream->avg_frame_rate);
-  if (fps_temp) {
-    video_cache_.fps = fps_temp;
+      video_info_.fmt_ctx->streams[video_info_.video_stream_index];
+  float fps_temp = av_q2d(stream->avg_frame_rate);
+  if (fps_temp != 0.0f) {
+    video_info_.fps = fps_temp;
   } else {  // 获取视频帧率失败，采用传入的fps值
-    video_cache_.fps = fps_;
+    RCLCPP_WARN(rclcpp::get_logger("image_pub_node"),
+                "get fps failed from stream, use parameter fps: %d instead!",
+                fps_);
+    video_info_.fps = fps_;
   }
   RCLCPP_INFO(rclcpp::get_logger("image_pub_node"),
-              "video index: %d fps: %f",
-              video_cache_.video_stream_index,
-              video_cache_.fps);
+              "video index: %d \nfps: %f",
+              video_info_.video_stream_index,
+              video_info_.fps);
 
   AVCodecContext *avctx = avcodec_alloc_context3(NULL);
   ret = avcodec_parameters_to_context(avctx, stream->codecpar);
   //获取视频编码类型(h264/h265)
-  video_cache_.stream_codec_ = avcodec_get_name(avctx->codec_id);
+  video_info_.stream_codec_ = avcodec_get_name(avctx->codec_id);
   RCLCPP_INFO(rclcpp::get_logger("image_pub_node"),
               "stream codec:%s",
-              video_cache_.stream_codec_.c_str());
+              video_info_.stream_codec_.c_str());
 
   //获取视频的分辨率
-  video_cache_.width = avctx->width;
-  video_cache_.height = avctx->height;
+  video_info_.width = avctx->width;
+  video_info_.height = avctx->height;
   RCLCPP_INFO(rclcpp::get_logger("image_pub_node"),
               "resolution: %d x %d\n",
-              video_cache_.width,
-              video_cache_.height);
+              video_info_.width,
+              video_info_.height);
   avcodec_free_context(&avctx);
   return 0;
 }
@@ -405,9 +422,9 @@ PubNode::PubNode(const std::string &node_name,
       rclcpp::shutdown();
       return;
     }
-    if (!IsType(image_format_.c_str(), format_list.list)) {
+    if (!IsType(image_format_.c_str(), format_list)) {
       std::stringstream ss;
-      std::string format_str = getStringFromVec(format_list.list);
+      std::string format_str = SpliceStringFromVec(format_list);
       ss << "Parameter: image_format setting error! Only " << format_str
          << " is supported\nimage_format: " << image_format_
          << "\nExample: -p image_format:=" << format_str;
@@ -416,7 +433,7 @@ PubNode::PubNode(const std::string &node_name,
       rclcpp::shutdown();
       return;
     }
-    if (IsType(image_format_.c_str(), video_list.list)) {
+    if (IsType(image_format_.c_str(), video_list)) {
       is_pub_video = true;
     }
   }
@@ -616,14 +633,14 @@ void PubNode::timer_callback() {
 void PubNode::pub_h26x() {
   do {
     if (data_list_.size() != 0) {
-      get_video_cache(data_list_[pub_index]);
+      get_video_info(data_list_[pub_index]);
     } else {
-      get_video_cache(image_source_);
+      get_video_info(image_source_);
     }
     AVPacket packet;
     av_init_packet(&packet);
     int packet_index = 0;
-    while (av_read_frame(video_cache_.fmt_ctx, &packet) >= 0) {
+    while (av_read_frame(video_info_.fmt_ctx, &packet) >= 0) {
       if (is_shared_mem_) {
         if (packet.size > MAX_HBMH26XFRAME) {
           // size大于HbmH26XFrame的最大长度  skip
@@ -636,13 +653,13 @@ void PubNode::pub_h26x() {
         if (loanedMsg.is_valid()) {
           auto &msg = loanedMsg.get();
           memset((void *)&msg, 0, sizeof(hbm_img_msgs::msg::HbmH26XFrame));
-          msg.height = video_cache_.height;
-          msg.width = video_cache_.width;
+          msg.height = video_info_.height;
+          msg.width = video_info_.width;
           memcpy(
               msg.encoding.data(), image_format_.c_str(), image_format_.size());
-          msg.index = ++video_cache_.count_;
-          if (video_cache_.count_ == UINT_MAX) {
-            video_cache_.count_ = 0;
+          msg.index = ++video_info_.count_;
+          if (video_info_.count_ == UINT_MAX) {
+            video_info_.count_ = 0;
           }
           struct timespec time_start = {0, 0};
           clock_gettime(CLOCK_REALTIME, &time_start);
@@ -660,7 +677,7 @@ void PubNode::pub_h26x() {
           }
           std::stringstream ss;
           ss << "image_pub_node publish hbm video msg, file: "
-             << video_cache_.video_file_ << ", topic: " << hbmem_pub_topic_
+             << video_info_.video_file_ << ", topic: " << hbmem_pub_topic_
              << ", encoding: " << msg.encoding.data()
              << ", stamp: " << msg.dts.sec << "." << msg.dts.nanosec
              << ", dLen: " << msg.data_size;
@@ -668,17 +685,17 @@ void PubNode::pub_h26x() {
               rclcpp::get_logger("image_pub_node"), "%s", ss.str().c_str());
           publisher_hbmem_h26x_->publish(std::move(loanedMsg));
           std::this_thread::sleep_for(
-              std::chrono::milliseconds((int)(1000.0 / video_cache_.fps)));
+              std::chrono::milliseconds((int)(1000.0 / video_info_.fps)));
         }
       } else {
         auto msg = img_msgs::msg::H26XFrame();
-        msg.height = video_cache_.height;
-        msg.width = video_cache_.width;
+        msg.height = video_info_.height;
+        msg.width = video_info_.width;
         memcpy(
             msg.encoding.data(), image_format_.c_str(), image_format_.size());
-        msg.index = ++video_cache_.count_;
-        if (video_cache_.count_ == UINT_MAX) {
-          video_cache_.count_ = 0;
+        msg.index = ++video_info_.count_;
+        if (video_info_.count_ == UINT_MAX) {
+          video_info_.count_ = 0;
         }
         ++packet_index;
         struct timespec time_start = {0, 0};
@@ -700,7 +717,7 @@ void PubNode::pub_h26x() {
         }
         std::stringstream ss;
         ss << "image_pub_node publish ros video msg, file: "
-           << video_cache_.video_file_ << ", topic: " << ros_pub_topic_
+           << video_info_.video_file_ << ", topic: " << ros_pub_topic_
            << ", encoding: " << msg.encoding.data()
            << ", stamp: " << msg.dts.sec << "." << msg.dts.nanosec
            << ", dLen: " << msg.data.size();
@@ -708,11 +725,11 @@ void PubNode::pub_h26x() {
             rclcpp::get_logger("image_pub_node"), "%s", ss.str().c_str());
         ros_publisher_h26x_->publish(msg);
         std::this_thread::sleep_for(
-            std::chrono::milliseconds((int)(1000.0 / video_cache_.fps)));
+            std::chrono::milliseconds((int)(1000.0 / video_info_.fps)));
       }
       av_packet_unref(&packet);
     }
-    avformat_close_input(&(video_cache_.fmt_ctx));
+    avformat_close_input(&(video_info_.fmt_ctx));
     set_pub_index();
   } while (is_loop_);
 }
@@ -721,18 +738,18 @@ void PubNode::pub_h26x() {
 void PubNode::pub_H264FromMP4() {
   do {
     if (data_list_.size() != 0) {
-      get_video_cache(data_list_[pub_index]);
+      get_video_info(data_list_[pub_index]);
     } else {
-      get_video_cache(image_source_);
+      get_video_info(image_source_);
     }
     AVPacket packet;
     bool sendSpsPps = false;
-    uint8_t *ex = video_cache_.fmt_ctx->streams[video_cache_.video_stream_index]
+    uint8_t *ex = video_info_.fmt_ctx->streams[video_info_.video_stream_index]
                       ->codecpar->extradata;
     int spsLength = (ex[6] << 8) | ex[7];
     int ppsLength = (ex[8 + spsLength + 1] << 8) | ex[8 + spsLength + 2];
-    while (av_read_frame(video_cache_.fmt_ctx, &packet) >= 0) {
-      if (packet.stream_index == video_cache_.video_stream_index) {
+    while (av_read_frame(video_info_.fmt_ctx, &packet) >= 0) {
+      if (packet.stream_index == video_info_.video_stream_index) {
         if (is_shared_mem_) {
           auto loanedMsg = publisher_hbmem_h26x_->borrow_loaned_message();
           if (loanedMsg.is_valid()) {
@@ -780,12 +797,12 @@ void PubNode::pub_H264FromMP4() {
               av_packet_unref(&packet);
               continue;
             }
-            msg.height = video_cache_.height;
-            msg.width = video_cache_.width;
+            msg.height = video_info_.height;
+            msg.width = video_info_.width;
             memcpy(msg.encoding.data(), "h264", strlen("h264"));
-            msg.index = ++video_cache_.count_;
-            if (video_cache_.count_ == UINT_MAX) {
-              video_cache_.count_ = 0;
+            msg.index = ++video_info_.count_;
+            if (video_info_.count_ == UINT_MAX) {
+              video_info_.count_ = 0;
             }
             struct timespec time_start = {0, 0};
             clock_gettime(CLOCK_REALTIME, &time_start);
@@ -796,7 +813,7 @@ void PubNode::pub_H264FromMP4() {
             msg.data_size = msg_temp - msg.data.data();
             std::stringstream ss;
             ss << "image_pub_node publish hbm video msg, file: "
-               << video_cache_.video_file_ << ", topic: " << hbmem_pub_topic_
+               << video_info_.video_file_ << ", topic: " << hbmem_pub_topic_
                << ", encoding: " << msg.encoding.data()
                << ", stamp: " << msg.dts.sec << "." << msg.dts.nanosec
                << ", dLen: " << msg.data_size;
@@ -804,7 +821,7 @@ void PubNode::pub_H264FromMP4() {
                 rclcpp::get_logger("image_pub_node"), "%s", ss.str().c_str());
             publisher_hbmem_h26x_->publish(std::move(loanedMsg));
             std::this_thread::sleep_for(
-                std::chrono::milliseconds((int)(1000.0 / video_cache_.fps)));
+                std::chrono::milliseconds((int)(1000.0 / video_info_.fps)));
           }
         } else {
           auto msg = img_msgs::msg::H26XFrame();
@@ -845,12 +862,12 @@ void PubNode::pub_H264FromMP4() {
             data = data + 4 + nalLength;  // 处理data中下一个NALU数据
           }
 
-          msg.height = video_cache_.height;
-          msg.width = video_cache_.width;
+          msg.height = video_info_.height;
+          msg.width = video_info_.width;
           memcpy(msg.encoding.data(), "h264", strlen("h264"));
-          msg.index = ++video_cache_.count_;
-          if (video_cache_.count_ == UINT_MAX) {
-            video_cache_.count_ = 0;
+          msg.index = ++video_info_.count_;
+          if (video_info_.count_ == UINT_MAX) {
+            video_info_.count_ = 0;
           }
           msg.data.resize(msg_temp - msg.data.data());
           struct timespec time_start = {0, 0};
@@ -860,7 +877,7 @@ void PubNode::pub_H264FromMP4() {
           msg.pts.sec = time_start.tv_sec;
           msg.pts.nanosec = time_start.tv_nsec;
           std::stringstream ss;
-          ss << "publish ros video msg, file: " << video_cache_.video_file_
+          ss << "publish ros video msg, file: " << video_info_.video_file_
              << ", topic: " << ros_pub_topic_
              << ", encoding: " << msg.encoding.data()
              << ", stamp: " << msg.dts.sec << "." << msg.dts.nanosec
@@ -869,12 +886,12 @@ void PubNode::pub_H264FromMP4() {
               rclcpp::get_logger("image_pub_node"), "%s", ss.str().c_str());
           ros_publisher_h26x_->publish(msg);
           std::this_thread::sleep_for(
-              std::chrono::milliseconds((int)(1000.0 / video_cache_.fps)));
+              std::chrono::milliseconds((int)(1000.0 / video_info_.fps)));
         }
       }
       av_packet_unref(&packet);
     }
-    avformat_close_input(&(video_cache_.fmt_ctx));
+    avformat_close_input(&(video_info_.fmt_ctx));
     set_pub_index();
   } while (is_loop_);
 }
