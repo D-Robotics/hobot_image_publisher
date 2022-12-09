@@ -45,25 +45,26 @@ std::vector<std::string> format_list = {
 std::vector<std::string> video_list = {{"mp4", "h264", "h265"}};
 
 /**
- * @brief 判断输入的类型tsType是否是类型集合fmtTypes中成员的工具函数
- * @param[in] tsType ：需要判断的类型
- * @param[in] fmtTypes ：所有类型的集合
- * @return true：tsType是fmtTypes中的成员
- * @return false tsType不是fmtTypes中的成员
+ * @brief 检查输入的格式format是否是hobot_image_publisher支持的格式
+ * @param[in] format ：需要判断的格式
+ * @param[in] fmtTypes ：hobot_image_publisher支持的格式集合
+ * @return true：format是hobot_image_publisher支持的格式
+ * @return false format不是hobot_image_publisher支持的格式
  */
-static bool IsType(const char *tsType,
-                   const std::vector<std::string> &fmtTypes) {
+static bool CheckFormat(const char *format,
+                        const std::vector<std::string> &fmtTypes) {
   for (uint32_t nIdx = 0; nIdx < fmtTypes.size(); ++nIdx) {
-    if (0 == strcmp(tsType, fmtTypes[nIdx].c_str())) return true;
+    if (0 == strcmp(format, fmtTypes[nIdx].c_str())) return true;
   }
   return false;
 }
 
-//获取vector成员拼接的string，此处用于输出所有支持的类型，便于动态维护
 /**
  * @brief Get the String From Vec object
- *        将vector中所有string成员重新拼接成一个新的string，每个成员之间用字符'/'隔开
- * @param fmtTypes ：
+ *        将hobot_image_publisher支持的格式拼接成一个字符串，不同格式之间用字符'/'隔开
+ *    例如当前支持的格式{"jpeg", "jpg", "nv12", "png", "mp4", "h264", "h265"}，
+ *    返回结果为jpeg/jpg/nv12/png/mp4/h264/h265
+ * @param fmtTypes ：hobot_image_publisher支持的格式集合
  * @return std::string 拼接后的string
  */
 static std::string SpliceStringFromVec(
@@ -283,11 +284,11 @@ int PubNode::get_video_info(const std::string &file) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
                  "Video file: %s not exist!",
                  file.c_str());
-    rclcpp::shutdown();
+    exit(-1);
     return -1;
   }
 
-  //打开video文件，获取context
+  // 打开video文件，获取context
   int ret =
       avformat_open_input(&(video_info_.fmt_ctx), file.c_str(), NULL, NULL);
   if (ret < 0) {
@@ -295,7 +296,7 @@ int PubNode::get_video_info(const std::string &file) {
                  "open file failed: %s, %s",
                  file.c_str(),
                  av_err2str_(ret));
-    rclcpp::shutdown();
+    exit(-1);
     return -1;
   }
   video_info_.video_file_ = file;
@@ -318,11 +319,11 @@ int PubNode::get_video_info(const std::string &file) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
                  "Cannot find a video stream in the input file: %s",
                  file.c_str());
-    rclcpp::shutdown();
+    exit(-1);
     return -1;
   }
 
-  //获取视频帧率fps
+  // 获取视频帧率fps
   const AVStream *stream =
       video_info_.fmt_ctx->streams[video_info_.video_stream_index];
   float fps_temp = av_q2d(stream->avg_frame_rate);
@@ -335,19 +336,49 @@ int PubNode::get_video_info(const std::string &file) {
     video_info_.fps = fps_;
   }
   RCLCPP_INFO(rclcpp::get_logger("image_pub_node"),
-              "video index: %d \nfps: %f",
+              "video index: %d, fps: %f",
               video_info_.video_stream_index,
               video_info_.fps);
 
   AVCodecContext *avctx = avcodec_alloc_context3(NULL);
   ret = avcodec_parameters_to_context(avctx, stream->codecpar);
-  //获取视频编码类型(h264/h265)
+  // 获取视频编码类型(h264/h265)
   video_info_.stream_codec_ = avcodec_get_name(avctx->codec_id);
+  if (video_info_.stream_codec_ == "hevc") {
+    // hevc与h265属于同一种格式，只是名称不同
+    video_info_.stream_codec_ = "h265";
+  }
+
+  if (image_format_ == "mp4" && video_info_.stream_codec_ != "h264") {
+    RCLCPP_ERROR(
+        rclcpp::get_logger("image_pub_node"),
+        "stream codec is %s but parameter image_format is mp4! "
+        "The video stream encoding format of mp4 files should be h264!",
+        video_info_.stream_codec_.c_str());
+    exit(-1);
+    return -1;
+  }
   RCLCPP_INFO(rclcpp::get_logger("image_pub_node"),
               "stream codec:%s",
               video_info_.stream_codec_.c_str());
 
-  //获取视频的分辨率
+  // 获取视频的分辨率
+  if (pub_index != 0) {
+    if (avctx->width != video_info_.width ||
+        avctx->height != video_info_.height) {
+      // 视频分辨率发生了变化
+      RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+                   "%s resolution is %d x %d, the previous resolution is %d x "
+                   "%d. Please publish videos with same resolution!\n",
+                   file.c_str(),
+                   avctx->width,
+                   avctx->height,
+                   video_info_.width,
+                   video_info_.height);
+      exit(-1);
+      return -1;
+    }
+  }
   video_info_.width = avctx->width;
   video_info_.height = avctx->height;
   RCLCPP_INFO(rclcpp::get_logger("image_pub_node"),
@@ -422,7 +453,7 @@ PubNode::PubNode(const std::string &node_name,
       rclcpp::shutdown();
       return;
     }
-    if (!IsType(image_format_.c_str(), format_list)) {
+    if (!CheckFormat(image_format_.c_str(), format_list)) {
       std::stringstream ss;
       std::string format_str = SpliceStringFromVec(format_list);
       ss << "Parameter: image_format setting error! Only " << format_str
@@ -433,7 +464,7 @@ PubNode::PubNode(const std::string &node_name,
       rclcpp::shutdown();
       return;
     }
-    if (IsType(image_format_.c_str(), video_list)) {
+    if (CheckFormat(image_format_.c_str(), video_list)) {
       is_pub_video = true;
     }
   }
@@ -629,7 +660,7 @@ void PubNode::timer_callback() {
   set_pub_index();
 }
 
-//发布h264、h265类型的topic
+// 发布h264、h265类型的topic
 void PubNode::pub_h26x() {
   do {
     if (data_list_.size() != 0) {
