@@ -24,6 +24,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(hbm_img_msgs REQUIRED)
+find_package(img_msgs REQUIRED)
 
 include_directories(include
 ${PROJECT_SOURCE_DIR}
@@ -34,6 +35,8 @@ message("SYS_ROOT is " ${SYS_ROOT})
 include_directories(
   ${SYS_ROOT}/usr/include/opencv/
 )
+
+set(FFMPEG_LIBRARIES avformat avutil avcodec)
 
 link_directories(
   ${SYS_ROOT}/usr/lib/hbbpu/
@@ -50,10 +53,11 @@ ament_target_dependencies(
   rclcpp
   sensor_msgs
   hbm_img_msgs
+  img_msgs
 )
 
 target_link_libraries(hobot_image_pub
-  hbmem opencv_world
+  hbmem opencv_world ${FFMPEG_LIBRARIES}
 )
 
 include_directories(include
