@@ -671,7 +671,7 @@ void PubNode::pub_h26x() {
     AVPacket packet;
     av_init_packet(&packet);
     int packet_index = 0;
-    while (av_read_frame(video_info_.fmt_ctx, &packet) >= 0) {
+    while (av_read_frame(video_info_.fmt_ctx, &packet) >= 0 && rclcpp::ok()) {
       if (is_shared_mem_) {
         if (packet.size > MAX_HBMH26XFRAME) {
           // size大于HbmH26XFrame的最大长度  skip
@@ -762,7 +762,7 @@ void PubNode::pub_h26x() {
     }
     avformat_close_input(&(video_info_.fmt_ctx));
     set_pub_index();
-  } while (is_loop_);
+  } while (is_loop_ && rclcpp::ok());
 }
 
 // 从MP4文件中提取并拼接h264视频流，然后发布h264类型的topic
@@ -779,7 +779,7 @@ void PubNode::pub_H264FromMP4() {
                       ->codecpar->extradata;
     int spsLength = (ex[6] << 8) | ex[7];
     int ppsLength = (ex[8 + spsLength + 1] << 8) | ex[8 + spsLength + 2];
-    while (av_read_frame(video_info_.fmt_ctx, &packet) >= 0) {
+    while (av_read_frame(video_info_.fmt_ctx, &packet) >= 0 && rclcpp::ok()) {
       if (packet.stream_index == video_info_.video_stream_index) {
         if (is_shared_mem_) {
           auto loanedMsg = publisher_hbmem_h26x_->borrow_loaned_message();
@@ -924,5 +924,5 @@ void PubNode::pub_H264FromMP4() {
     }
     avformat_close_input(&(video_info_.fmt_ctx));
     set_pub_index();
-  } while (is_loop_);
+  } while (is_loop_ && rclcpp::ok());
 }
