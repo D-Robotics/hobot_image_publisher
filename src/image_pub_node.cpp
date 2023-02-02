@@ -435,6 +435,19 @@ PubNode::PubNode(const std::string &node_name,
   this->get_parameter<std::string>("image_format", image_format_);
   this->get_parameter<std::string>("msg_pub_topic_name", msg_pub_topic_name_);
 
+  RCLCPP_WARN_STREAM(rclcpp::get_logger("image_pub_node"),
+    "parameter:"
+    << "\nimage_source: " << image_source_
+    << "\nsource_image_w: " << source_image_w_
+    << "\nsource_image_h: " << source_image_h_
+    << "\noutput_image_w: " << output_image_w_
+    << "\noutput_image_h: " << output_image_h_
+    << "\nfps: " << fps_
+    << "\nis_shared_mem: " << is_shared_mem_
+    << "\nis_loop: " << is_loop_
+    << "\nimage_format: " << image_format_
+    << "\nmsg_pub_topic_name: " << msg_pub_topic_name_);
+
   if (image_format_.size() == 0) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
                  "Please add parameter: image_format to your command!\n"
