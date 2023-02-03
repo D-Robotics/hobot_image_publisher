@@ -183,7 +183,8 @@ void processImage(ImageCache &image_cache,
                   const int32_t &output_image_h,
                   const int32_t &source_image_w,
                   const int32_t &source_image_h,
-                  const std::string &image_format) {
+                  const std::string &image_format,
+                  bool is_compressed_img_pub) {
   image_cache.image_ = image_source;
   if (access(image_cache.image_.c_str(), R_OK) == -1) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
@@ -248,8 +249,6 @@ void processImage(ImageCache &image_cache,
   }
   // 根据配置参数改变图片分辨率以及格式转换
   cv::Mat pad_frame(pad_height, pad_width, CV_8UC3, cv::Scalar::all(0));
-  cv::Mat &nv12_mat = image_cache.nv12_mat;
-
   if (ori_width != pad_width || ori_height != pad_height) {
     if (image_format == "nv12") {
       cv::cvtColor(nv12_tmp, bgr_mat, CV_YUV2BGR_NV12);
@@ -259,21 +258,32 @@ void processImage(ImageCache &image_cache,
   } else {
     pad_frame = bgr_mat;
   }
-  if (image_format == "nv12" &&
-      (ori_width == pad_width && ori_height == pad_height)) {
-    nv12_mat = nv12_tmp;
+  
+  if (is_compressed_img_pub) {
+    // 使用opencv的imencode接口将mat转成vector，获取图片size
+    std::vector<int> param;
+    imencode(".jpg", pad_frame, image_cache.jpeg, param);
+    image_cache.img_data = image_cache.jpeg.data();
+    image_cache.data_len = image_cache.jpeg.size();
   } else {
-    auto ret = BGRToNv12(pad_frame, nv12_mat);
-    if (ret) {
-      RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
-                   "Image: %s get nv12 image failed",
-                   image_source.c_str());
-      rclcpp::shutdown();
-      return;
+    cv::Mat &nv12_mat = image_cache.nv12_mat;
+    if (image_format == "nv12" &&
+        (ori_width == pad_width && ori_height == pad_height)) {
+      nv12_mat = nv12_tmp;
+    } else {
+      auto ret = BGRToNv12(pad_frame, nv12_mat);
+      if (ret) {
+        RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+                    "Image: %s get nv12 image failed",
+                    image_source.c_str());
+        rclcpp::shutdown();
+        return;
+      }
     }
+    image_cache.img_data = image_cache.nv12_mat.data;
+    image_cache.data_len = pad_width * pad_height * 3 / 2;
   }
-  image_cache.img_data = nv12_mat.data;
-  image_cache.data_len = pad_width * pad_height * 3 / 2;
+  
   image_cache.width = pad_width;
   image_cache.height = pad_height;
 }
@@ -419,6 +429,7 @@ PubNode::PubNode(const std::string &node_name,
   this->declare_parameter<int32_t>("fps", fps_);
   this->declare_parameter<bool>("is_shared_mem", is_shared_mem_);
   this->declare_parameter<bool>("is_loop", is_loop_);
+  this->declare_parameter<bool>("is_compressed_img_pub", is_compressed_img_pub_);
   this->declare_parameter<std::string>("image_source", image_source_);
   this->declare_parameter<std::string>("image_format", image_format_);
   this->declare_parameter<std::string>("msg_pub_topic_name",
@@ -432,6 +443,7 @@ PubNode::PubNode(const std::string &node_name,
   this->get_parameter<int32_t>("fps", fps_);
   this->get_parameter<bool>("is_shared_mem", is_shared_mem_);
   this->get_parameter<bool>("is_loop", is_loop_);
+  this->get_parameter<bool>("is_compressed_img_pub", is_compressed_img_pub_);
   this->get_parameter<std::string>("image_format", image_format_);
   this->get_parameter<std::string>("msg_pub_topic_name", msg_pub_topic_name_);
 
@@ -445,6 +457,7 @@ PubNode::PubNode(const std::string &node_name,
     << "\nfps: " << fps_
     << "\nis_shared_mem: " << is_shared_mem_
     << "\nis_loop: " << is_loop_
+    << "\nis_compressed_img_pub: " << is_compressed_img_pub_
     << "\nimage_format: " << image_format_
     << "\nmsg_pub_topic_name: " << msg_pub_topic_name_);
 
@@ -505,7 +518,8 @@ PubNode::PubNode(const std::string &node_name,
                      output_image_h_,
                      source_image_w_,
                      source_image_h_,
-                     image_format_);
+                     image_format_,
+                     is_compressed_img_pub_);
       }
     } else if (file_extension == "list") {
       // 路径为list文件
@@ -620,7 +634,8 @@ void PubNode::timer_callback() {
                  output_image_h_,
                  source_image_w_,
                  source_image_h_,
-                 image_format_);
+                 image_format_,
+                 is_compressed_img_pub_);
   }
   if (is_shared_mem_) {
     auto loanedMsg = publisher_hbmem_->borrow_loaned_message();
@@ -628,7 +643,11 @@ void PubNode::timer_callback() {
       auto &msg = loanedMsg.get();
       msg.height = image_cache_.height;
       msg.width = image_cache_.width;
-      memcpy(msg.encoding.data(), "nv12", strlen("nv12"));
+      if (is_compressed_img_pub_) {
+        memcpy(msg.encoding.data(), "jpeg", strlen("jpeg"));
+      } else {
+        memcpy(msg.encoding.data(), "nv12", strlen("nv12"));
+      }
       memcpy(&msg.data[0], image_cache_.img_data, image_cache_.data_len);
       struct timespec time_start = {0, 0};
       clock_gettime(CLOCK_REALTIME, &time_start);
@@ -651,7 +670,11 @@ void PubNode::timer_callback() {
     auto msg = sensor_msgs::msg::Image();
     msg.height = image_cache_.height;
     msg.width = image_cache_.width;
-    msg.encoding = "nv12";
+    if (is_compressed_img_pub_) {
+      msg.encoding = "jpeg";
+    } else {
+      msg.encoding = "nv12";
+    }
     msg.data.resize(image_cache_.data_len);
     memcpy(&msg.data[0], image_cache_.img_data, image_cache_.data_len);
     struct timespec time_start = {0, 0};

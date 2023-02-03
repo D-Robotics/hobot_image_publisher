@@ -79,6 +79,7 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
 | fps                | topic发布帧率(发布视频会自动获取视频编码信息中的fps，如果获取失败则采用此帧率发布) | int         | [1, 30]，在此范围外不做帧率控制                                     | 否       | 10 |
 | is_loop            | 是否进行循环发布                       | bool        | True/False                                 | 否       | True |
 | is_shared_mem      | 是否使用share_mem的方式通信            | bool        | True/False                                      | 否       | True |
+| is_compressed_img_pub | 是否直接发布jpeg/jpg/png格式的压缩图片 | bool     | True：直接发布压缩图片；False：将图片解码成NV12格式后发布 | 否       | False |
 
 ## 注意事项
 - 如需使用list指定图片或视频文件，请编写config下的img.list或video.list，注意list文件编写格式:一个文件路径为一行。
@@ -90,6 +91,7 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
 - 更换图片/视频路径时，请确认参数image_format与图片/视频格式匹配
 - 当参数output_image_w和output_image_h设置为0或不设置时，不改变图像分辨率
 - 发布视频时，hobot_image_publisher会自动获取视频的分辨率，且不支持分辨率更改，分辨率配置无效
+- 发布图片时，只有当图片格式image_format为jpeg/jpg/png格式时，is_compressed_img_pub参数生效
 
 ## 运行
 - ros2 run运行(请将image_source更换成自己的文件路径)
@@ -103,6 +105,10 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
   读取文件夹中所有格式为jpg的图片，并以帧率为5的频率发布nv12图片数据
   ```
   ros2 run hobot_image_publisher hobot_image_pub --ros-args -p image_source:=./config -p fps:=5 -p output_image_w:=960 -p output_image_h:=544 -p image_format:=jpg -p source_image_w:=960 -p source_image_h:=544
+  ```
+  读取./config/test1.jpg图片，发布jpg格式图片数据
+  ```
+  ros2 run hobot_image_publisher hobot_image_pub --ros-args -p image_source:=./config/test1.jpg -p output_image_w:=960 -p output_image_h:=544 -p image_format:=jpg -p is_compressed_img_pub:=True
   ```
   读取img.list文件，获取img.list中列出的所有格式为jpg的图片路径，发布nv12图片数据，帧率为5
   ```
