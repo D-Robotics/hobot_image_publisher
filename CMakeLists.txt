@@ -26,22 +26,26 @@ find_package(sensor_msgs REQUIRED)
 find_package(hbm_img_msgs REQUIRED)
 find_package(img_msgs REQUIRED)
 
-include_directories(include
-${PROJECT_SOURCE_DIR}
-)
-
-set(SYS_ROOT ${CMAKE_SYSROOT})
-message("SYS_ROOT is " ${SYS_ROOT})
-include_directories(
-  ${SYS_ROOT}/usr/include/opencv/
-)
-
-set(FFMPEG_LIBRARIES avformat avutil avcodec)
-
-link_directories(
-  ${SYS_ROOT}/usr/lib/hbbpu/
-  ${SYS_ROOT}/usr/lib/
-)
+if(PLATFORM_X3)
+  set(SYS_ROOT ${CMAKE_SYSROOT})
+  message("SYS_ROOT is " ${SYS_ROOT})
+  include_directories(
+    ${SYS_ROOT}/usr/include/opencv/
+  )
+  link_directories(
+    ${SYS_ROOT}/usr/lib/hbbpu/
+    ${SYS_ROOT}/usr/lib/
+  )
+elseif(PLATFORM_X86)
+  find_package(OpenCV REQUIRED)
+  include_directories(
+    /usr/include/
+    /usr/include/opencv4
+  )
+  link_directories(
+    /lib/
+  )
+endif()
 
 add_executable(hobot_image_pub
 src/main.cpp
@@ -56,9 +60,15 @@ ament_target_dependencies(
   img_msgs
 )
 
-target_link_libraries(hobot_image_pub
-  hbmem opencv_world ${FFMPEG_LIBRARIES}
-)
+set(FFMPEG_LIBRARIES avformat avutil avcodec)
+
+if(PLATFORM_X3)
+  set(SYS_LIB hbmem opencv_world ${FFMPEG_LIBRARIES})
+elseif(PLATFORM_X86)
+  set(SYS_LIB ${OpenCV_LIBS} ${FFMPEG_LIBRARIES})
+endif()
+
+target_link_libraries(hobot_image_pub ${SYS_LIB})
 
 include_directories(include
 ${PROJECT_SOURCE_DIR}
