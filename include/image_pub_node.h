@@ -47,6 +47,7 @@ extern "C" {
 struct ImageCache {
   std::string image_;
   cv::Mat nv12_mat;
+  std::vector<uint8_t> jpeg;
   uint8_t *img_data = nullptr;
   int32_t width = 0;
   int32_t height = 0;
@@ -100,6 +101,8 @@ class PubNode : public rclcpp::Node {
   bool is_loop_ = true;
   bool is_pub_video = false;
   uint32_t pub_index = 0;
+  // 是否直接发布jpeg/jpg/png格式的压缩图片
+  bool is_compressed_img_pub_ = false;
 
   ImageCache image_cache_;  // 保存当前发布的图片信息
   VideoInfo video_info_;  // 保存当前发布的视频编码参数，fps，分辨率等
