@@ -492,6 +492,12 @@ PubNode::PubNode(const std::string &node_name,
     }
     if (CheckFormat(image_format_.c_str(), video_list)) {
       is_pub_video = true;
+    } else if ("nv12" == image_format_ && is_compressed_img_pub_) {
+      RCLCPP_WARN_STREAM(rclcpp::get_logger("image_pub_node"),
+        "Paras are unmatch! image_format_: " << image_format_
+        << ", is_compressed_img_pub: " << is_compressed_img_pub_
+        << " is only valid for compressed img and reset as False.");
+      is_compressed_img_pub_ = false;
     }
   }
 
