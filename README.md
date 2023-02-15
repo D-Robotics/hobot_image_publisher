@@ -80,7 +80,6 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
      --cmake-args \
      -DPLATFORM_X86=ON \ 
      -DTHIRD_PARTY=`pwd`/../sysroot_docker \
-     -DBUILD_HBMEM:=ON 
   ```
 
 # 使用介绍
