@@ -1,5 +1,9 @@
 # Changelog for package hobot_image_publisher
 
+tros_1.1.5rc1 (2023-2-15)
+------------------
+1. 修复配置参数msg_pub_topic_name默认值输出为空的问题
+
 tros_1.1.5 (2023-2-3)
 ------------------
 1. 配置文件新增h265编码视频

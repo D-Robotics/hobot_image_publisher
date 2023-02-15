@@ -258,7 +258,7 @@ void processImage(ImageCache &image_cache,
   } else {
     pad_frame = bgr_mat;
   }
-  
+
   if (is_compressed_img_pub) {
     // 使用opencv的imencode接口将mat转成vector，获取图片size
     std::vector<int> param;
@@ -274,8 +274,8 @@ void processImage(ImageCache &image_cache,
       auto ret = BGRToNv12(pad_frame, nv12_mat);
       if (ret) {
         RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
-                    "Image: %s get nv12 image failed",
-                    image_source.c_str());
+                     "Image: %s get nv12 image failed",
+                     image_source.c_str());
         rclcpp::shutdown();
         return;
       }
@@ -283,7 +283,7 @@ void processImage(ImageCache &image_cache,
     image_cache.img_data = image_cache.nv12_mat.data;
     image_cache.data_len = pad_width * pad_height * 3 / 2;
   }
-  
+
   image_cache.width = pad_width;
   image_cache.height = pad_height;
 }
@@ -429,7 +429,8 @@ PubNode::PubNode(const std::string &node_name,
   this->declare_parameter<int32_t>("fps", fps_);
   this->declare_parameter<bool>("is_shared_mem", is_shared_mem_);
   this->declare_parameter<bool>("is_loop", is_loop_);
-  this->declare_parameter<bool>("is_compressed_img_pub", is_compressed_img_pub_);
+  this->declare_parameter<bool>("is_compressed_img_pub",
+                                is_compressed_img_pub_);
   this->declare_parameter<std::string>("image_source", image_source_);
   this->declare_parameter<std::string>("image_format", image_format_);
   this->declare_parameter<std::string>("msg_pub_topic_name",
@@ -447,19 +448,26 @@ PubNode::PubNode(const std::string &node_name,
   this->get_parameter<std::string>("image_format", image_format_);
   this->get_parameter<std::string>("msg_pub_topic_name", msg_pub_topic_name_);
 
-  RCLCPP_WARN_STREAM(rclcpp::get_logger("image_pub_node"),
-    "parameter:"
-    << "\nimage_source: " << image_source_
-    << "\nsource_image_w: " << source_image_w_
-    << "\nsource_image_h: " << source_image_h_
-    << "\noutput_image_w: " << output_image_w_
-    << "\noutput_image_h: " << output_image_h_
-    << "\nfps: " << fps_
-    << "\nis_shared_mem: " << is_shared_mem_
-    << "\nis_loop: " << is_loop_
-    << "\nis_compressed_img_pub: " << is_compressed_img_pub_
-    << "\nimage_format: " << image_format_
-    << "\nmsg_pub_topic_name: " << msg_pub_topic_name_);
+  std::stringstream ss_param;
+  ss_param << "parameter:"
+           << "\nimage_source: " << image_source_
+           << "\nsource_image_w: " << source_image_w_
+           << "\nsource_image_h: " << source_image_h_
+           << "\noutput_image_w: " << output_image_w_
+           << "\noutput_image_h: " << output_image_h_ << "\nfps: " << fps_
+           << "\nis_shared_mem: " << is_shared_mem_ << "\nis_loop: " << is_loop_
+           << "\nis_compressed_img_pub: " << is_compressed_img_pub_
+           << "\nimage_format: " << image_format_ << "\nmsg_pub_topic_name: ";
+  if (msg_pub_topic_name_.size() != 0) {
+    ss_param << msg_pub_topic_name_;
+  } else {
+    if (is_shared_mem_ == true) {
+      ss_param << hbmem_pub_topic_;
+    } else {
+      ss_param << ros_pub_topic_;
+    }
+  }
+  RCLCPP_WARN(rclcpp::get_logger("image_pub_node"), ss_param.str().c_str());
 
   if (image_format_.size() == 0) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
@@ -493,10 +501,12 @@ PubNode::PubNode(const std::string &node_name,
     if (CheckFormat(image_format_.c_str(), video_list)) {
       is_pub_video = true;
     } else if ("nv12" == image_format_ && is_compressed_img_pub_) {
-      RCLCPP_WARN_STREAM(rclcpp::get_logger("image_pub_node"),
-        "Paras are unmatch! image_format_: " << image_format_
-        << ", is_compressed_img_pub: " << is_compressed_img_pub_
-        << " is only valid for compressed img and reset as False.");
+      RCLCPP_WARN_STREAM(
+          rclcpp::get_logger("image_pub_node"),
+          "Paras are unmatch! image_format_: "
+              << image_format_
+              << ", is_compressed_img_pub: " << is_compressed_img_pub_
+              << " is only valid for compressed img and reset as False.");
       is_compressed_img_pub_ = false;
     }
   }
