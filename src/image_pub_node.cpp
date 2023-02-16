@@ -258,7 +258,6 @@ void processImage(ImageCache &image_cache,
   } else {
     pad_frame = bgr_mat;
   }
-  
   if (is_compressed_img_pub) {
     // 使用opencv的imencode接口将mat转成vector，获取图片size
     std::vector<int> param;
@@ -283,7 +282,6 @@ void processImage(ImageCache &image_cache,
     image_cache.img_data = image_cache.nv12_mat.data;
     image_cache.data_len = pad_width * pad_height * 3 / 2;
   }
-  
   image_cache.width = pad_width;
   image_cache.height = pad_height;
 }
@@ -447,6 +445,13 @@ PubNode::PubNode(const std::string &node_name,
   this->get_parameter<std::string>("image_format", image_format_);
   this->get_parameter<std::string>("msg_pub_topic_name", msg_pub_topic_name_);
 
+  if (msg_pub_topic_name_.size() == 0) {
+    if (is_shared_mem_ == true) {
+      msg_pub_topic_name_ = hbmem_pub_topic_;
+    } else {
+      msg_pub_topic_name_ = ros_pub_topic_;
+    }
+  }
   RCLCPP_WARN_STREAM(rclcpp::get_logger("image_pub_node"),
     "parameter:"
     << "\nimage_source: " << image_source_
@@ -591,23 +596,14 @@ PubNode::PubNode(const std::string &node_name,
     }
   }
 
-  hbmem_pub_topic_ =
-      ((is_shared_mem_ == true) && (msg_pub_topic_name_.size() != 0))
-          ? msg_pub_topic_name_
-          : hbmem_pub_topic_;
-  ros_pub_topic_ =
-      ((is_shared_mem_ == false) && (msg_pub_topic_name_.size() != 0))
-          ? msg_pub_topic_name_
-          : ros_pub_topic_;
-
   if (is_pub_video) {  // 发布视频
     if (is_shared_mem_ == true) {
       publisher_hbmem_h26x_ =
           this->create_publisher_hbmem<hbm_img_msgs::msg::HbmH26XFrame>(
-              hbmem_pub_topic_, 10);
+              msg_pub_topic_name_, 10);
     } else {
       ros_publisher_h26x_ =
-          this->create_publisher<img_msgs::msg::H26XFrame>(ros_pub_topic_, 10);
+          this->create_publisher<img_msgs::msg::H26XFrame>(msg_pub_topic_name_, 10);
     }
     if (image_format_ == "h264" || image_format_ == "h265") {
       pub_h26x();
@@ -618,10 +614,10 @@ PubNode::PubNode(const std::string &node_name,
     if (is_shared_mem_ == true) {
       publisher_hbmem_ =
           this->create_publisher_hbmem<hbm_img_msgs::msg::HbmMsg1080P>(
-              hbmem_pub_topic_, 10);
+              msg_pub_topic_name_, 10);
     } else {
       ros_publisher_ =
-          this->create_publisher<sensor_msgs::msg::Image>(ros_pub_topic_, 10);
+          this->create_publisher<sensor_msgs::msg::Image>(msg_pub_topic_name_, 10);
     }
     timer_ = this->create_wall_timer(std::chrono::milliseconds(1000 / fps_),
                                      std::bind(&PubNode::timer_callback, this));
@@ -669,7 +665,7 @@ void PubNode::timer_callback() {
                   msg.height,
                   msg.width,
                   msg.data_size,
-                  hbmem_pub_topic_.data());
+                  msg_pub_topic_name_.data());
       publisher_hbmem_->publish(std::move(loanedMsg));
     }
   } else {
@@ -695,7 +691,7 @@ void PubNode::timer_callback() {
                 msg.encoding.data(),
                 msg.height,
                 msg.width,
-                ros_pub_topic_.data());
+                msg_pub_topic_name_.data());
     ros_publisher_->publish(msg);
   }
   // 处理循环
@@ -750,7 +746,7 @@ void PubNode::pub_h26x() {
           }
           std::stringstream ss;
           ss << "image_pub_node publish hbm video msg, file: "
-             << video_info_.video_file_ << ", topic: " << hbmem_pub_topic_
+             << video_info_.video_file_ << ", topic: " << msg_pub_topic_name_
              << ", encoding: " << msg.encoding.data()
              << ", stamp: " << msg.dts.sec << "." << msg.dts.nanosec
              << ", dLen: " << msg.data_size;
@@ -790,7 +786,7 @@ void PubNode::pub_h26x() {
         }
         std::stringstream ss;
         ss << "image_pub_node publish ros video msg, file: "
-           << video_info_.video_file_ << ", topic: " << ros_pub_topic_
+           << video_info_.video_file_ << ", topic: " << msg_pub_topic_name_
            << ", encoding: " << msg.encoding.data()
            << ", stamp: " << msg.dts.sec << "." << msg.dts.nanosec
            << ", dLen: " << msg.data.size();
@@ -886,7 +882,7 @@ void PubNode::pub_H264FromMP4() {
             msg.data_size = msg_temp - msg.data.data();
             std::stringstream ss;
             ss << "image_pub_node publish hbm video msg, file: "
-               << video_info_.video_file_ << ", topic: " << hbmem_pub_topic_
+               << video_info_.video_file_ << ", topic: " << msg_pub_topic_name_
                << ", encoding: " << msg.encoding.data()
                << ", stamp: " << msg.dts.sec << "." << msg.dts.nanosec
                << ", dLen: " << msg.data_size;
@@ -951,7 +947,7 @@ void PubNode::pub_H264FromMP4() {
           msg.pts.nanosec = time_start.tv_nsec;
           std::stringstream ss;
           ss << "publish ros video msg, file: " << video_info_.video_file_
-             << ", topic: " << ros_pub_topic_
+             << ", topic: " << msg_pub_topic_name_
              << ", encoding: " << msg.encoding.data()
              << ", stamp: " << msg.dts.sec << "." << msg.dts.nanosec
              << ", dLen: " << msg.data.size();
