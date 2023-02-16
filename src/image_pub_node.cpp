@@ -251,7 +251,7 @@ void processImage(ImageCache &image_cache,
   cv::Mat pad_frame(pad_height, pad_width, CV_8UC3, cv::Scalar::all(0));
   if (ori_width != pad_width || ori_height != pad_height) {
     if (image_format == "nv12") {
-      cv::cvtColor(nv12_tmp, bgr_mat, CV_YUV2BGR_NV12);
+      cv::cvtColor(nv12_tmp, bgr_mat, cv::COLOR_YUV2BGR_NV12);
     }
     resizeImage(
         bgr_mat, pad_frame, pad_height, pad_width, ori_width, ori_height);

@@ -23,12 +23,12 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
 
 - 编程语言: C/C++
 - 开发平台: X3/X86
-- 系统版本：Ubuntu 20.0.4
+- 系统版本：Ubuntu 20.04
 - 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
 
 ## 编译
 
-### X3 Ubuntu系统上编译
+### X3 Ubuntu系统上编译X3版本
 
 1. 编译环境确认
   - 板端已安装X3 Ubuntu系统。
@@ -38,15 +38,15 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
 2. 编译
   - 编译命令：`colcon build --packages-select hobot_image_publisher`
 
-### docker交叉编译
+### docker交叉编译X3版本
 
-1、编译环境确认
+1. 编译环境确认
 
 - 在docker中编译，并且docker中已经安装好TogetherROS。docker安装、交叉编译说明、TogetherROS编译和部署说明详见机器人开发平台robot_dev_config repo中的README.md。
 - 已编译hbm_img_msgs package
 - 已编译img_msgs package
 
-2、编译
+2. 编译
 
 - 编译命令：
 
@@ -63,6 +63,24 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
      -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake
   ```
 
+### X86 Ubuntu系统上编译X86版本
+
+1. 编译环境确认
+
+- X86 Ubuntu版本：Ubuntu20.04
+- Opencv：4.2.0
+
+2. 编译
+
+- 编译命令：
+
+  ```
+  colcon build --packages-select hobot_image_publisher \
+     --merge-install \
+     --cmake-args \
+     -DPLATFORM_X86=ON \ 
+     -DTHIRD_PARTY=`pwd`/../sysroot_docker \
+  ```
 
 # 使用介绍
 
