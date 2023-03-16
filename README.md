@@ -151,9 +151,14 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
   # config中为示例使用的图片和视频文件，根据实际安装路径进行拷贝
   # 如果是板端编译（无--merge-install编译选项），拷贝命令为cp -r install/PKG_NAME/lib/PKG_NAME/config/ .，其中PKG_NAME为具体的package名
   cp -r install/lib/hobot_image_publisher/config/ .
+  
+  #若使用X86平台，第一次运行要启动webserver服务，用于浏览器显示，运行方法为:
+  cd ./install/lib/websocket/webservice
+  sudo chmod +x ./sbin/nginx
+  sudo ./sbin/nginx -p .
   ```
 
-  1.图片发布效果展示，会启动hobot_codec以及websocket，图片显示于浏览器，请在浏览器中输入IP地址查看，效果见下方效果展示(websocket具体用法参考hobot_websocket)
+  1.图片发布效果展示，会启动hobot_codec以及websocket，图片显示于浏览器，请在浏览器中输入"IP地址:8000"查看，效果见下方效果展示(websocket具体用法参考hobot_websocket)
   ```
   ros2 launch hobot_image_publisher hobot_image_publisher_demo.launch.py
   ```
@@ -163,7 +168,7 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
   ros2 launch hobot_image_publisher hobot_image_publisher.launch.py
   ```
 
-  3.视频发布效果展示，会启动hobot_codec以及websocket，视频显示于浏览器，请在浏览器中输入IP地址查看，效果见下方效果展示(websocket具体用法参考hobot_websocket)。该示例读取video.list文件，并循环发布视频，发布话题为/hbmem_img，参数设置可参考该launch文件
+  3.视频发布效果展示，会启动hobot_codec以及websocket，视频显示于浏览器，请在浏览器中输入"IP地址:8000"查看，效果见下方效果展示(websocket具体用法参考hobot_websocket)。该示例读取video.list文件，并循环发布视频，发布话题为/hbmem_img，参数设置可参考该launch文件
   
   ```
   ros2 launch hobot_image_publisher hobot_image_publisher_videolist_demo.launch.py
