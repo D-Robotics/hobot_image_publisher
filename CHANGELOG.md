@@ -1,5 +1,9 @@
 # Changelog for package hobot_image_publisher
 
+tros_1.1.6 (2023-03-16)
+------------------
+1. 完善README.md
+
 tros_1.1.6a (2023-02-16)
 ------------------
 1. 适配x86版本功能
