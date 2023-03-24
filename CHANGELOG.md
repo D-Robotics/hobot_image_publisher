@@ -1,5 +1,9 @@
 # Changelog for package hobot_image_publisher
 
+tros_1.1.6rc1 (2023-03-23)
+------------------
+1. 修改README.md
+
 tros_1.1.6 (2023-03-16)
 ------------------
 1. 完善README.md
