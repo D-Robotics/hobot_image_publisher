@@ -54,7 +54,7 @@ elseif(PLATFORM_J5)
   set(SYS_LIB hbmem opencv_world ${FFMPEG_LIBRARIES})
 elseif(PLATFORM_X86)
   message("build platform X86")
-  find_package(OpenCV REQUIRED)
+  find_package(OpenCV 4 REQUIRED)
   include_directories(
     /usr/include/
     /usr/include/opencv4
