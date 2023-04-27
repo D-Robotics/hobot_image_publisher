@@ -1,3 +1,17 @@
+# Copyright (c) 2022，Horizon Robotics.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 
 from launch import LaunchDescription
@@ -8,17 +22,9 @@ from launch.substitutions import LaunchConfiguration
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python import get_package_share_directory
 
-def generate_launch_description():
-    web_service_launch_include = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(
-                get_package_share_directory('websocket'),
-                'launch/hobot_websocket_service.launch.py'))
-    )
 
+def generate_launch_description():
     return LaunchDescription([
-        #启动webservice
-        web_service_launch_include,
         # 启动图片发布pkg
         Node(
             package='hobot_image_publisher',
@@ -37,31 +43,27 @@ def generate_launch_description():
             arguments=['--ros-args', '--log-level', 'error']
         ),
         # 启动jpeg图片编码&发布pkg
-        Node(
-            package='hobot_codec',
-            executable='hobot_codec_republish',
-            output='screen',
-            parameters=[
-                {"channel": 1},
-                {"in_mode": "shared_mem"},
-                {"in_format": "nv12"},
-                {"out_mode": "ros"},
-                {"out_format": "jpeg"},
-                {"sub_topic": "/hbmem_img"},
-                {"pub_topic": "/image_jpeg"}
-            ],
-            arguments=['--ros-args', '--log-level', 'error']
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(
+                    get_package_share_directory('hobot_codec'),
+                    'launch/hobot_codec_encode.launch.py')),
+            launch_arguments={
+                'codec_in_mode': 'shared_mem',
+                'codec_out_mode': 'ros',
+                'codec_sub_topic': '/hbmem_img',
+                'codec_pub_topic': '/image_jpeg'
+            }.items()
         ),
         # 启动web展示pkg
-        Node(
-            package='websocket',
-            executable='websocket',
-            output='screen',
-            parameters=[
-                {"image_topic": "/image_jpeg"},
-                {"image_type": "mjpeg"},
-                {"only_show_image": True},
-            ],
-            arguments=['--ros-args', '--log-level', 'error']
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(
+                    get_package_share_directory('websocket'),
+                    'launch/websocket.launch.py')),
+            launch_arguments={
+                'websocket_image_topic': '/image_jpeg',
+                'websocket_only_show_image': 'True'
+            }.items()
         )
     ])
