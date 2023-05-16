@@ -47,11 +47,11 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(
                 os.path.join(
                     get_package_share_directory('hobot_codec'),
-                    'launch/hobot_codec_decode.launch.py')),
+                    'launch/hobot_codec.launch.py')),
             launch_arguments={
                 'codec_in_mode': 'shared_mem',
                 'codec_in_format': 'h264',
-                'codec_out_mode': 'ros',
+                'codec_out_mode': 'shared_mem',
                 'codec_out_format': 'nv12',
                 'codec_sub_topic': '/hbmem_img',
                 'codec_pub_topic': '/image_nv12'
@@ -62,10 +62,12 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(
                 os.path.join(
                     get_package_share_directory('hobot_codec'),
-                    'launch/hobot_codec_encode.launch.py')),
+                    'launch/hobot_codec.launch.py')),
             launch_arguments={
-                'codec_in_mode': 'ros',
+                'codec_in_mode': 'shared_mem',
+                'codec_in_format': 'nv12',
                 'codec_out_mode': 'ros',
+                'codec_out_format': 'jpeg',
                 'codec_sub_topic': '/image_nv12',
                 'codec_pub_topic': '/image_jpeg'
             }.items()
