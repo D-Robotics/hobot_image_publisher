@@ -1,5 +1,9 @@
 # Changelog for package hobot_image_publisher
 
+tros_2.0.1 (2023-07-14)
+------------------
+1. 规范X5ultra产品名。
+
 tros_2.0.0rc1 (2023-05-23)
 ------------------
 1. 修复usb_camera launch启动失败问题

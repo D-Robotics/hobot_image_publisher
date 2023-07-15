@@ -40,8 +40,8 @@ if(PLATFORM_X3)
     ${SYS_ROOT}/usr/lib/
   )
   set(SYS_LIB hbmem opencv_world ${FFMPEG_LIBRARIES})
-elseif(PLATFORM_J5)
-  message("build platform J5")
+elseif(PLATFORM_X5ultra)
+  message("build platform X5ultra")
   set(SYS_ROOT ${CMAKE_SYSROOT})
   message("SYS_ROOT is " ${SYS_ROOT})
   include_directories(
