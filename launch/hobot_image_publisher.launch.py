@@ -60,6 +60,10 @@ def generate_launch_description():
             'publish_is_shared_mem',
             default_value='True',
             description='using zero copy or not'),
+        DeclareLaunchArgument(
+            'publish_is_compressed_img_pub',
+            default_value='False',
+            description='publish jpeg/jpg/png imgs using CompressedImage'),
         # 启动图片发布pkg，output_image_w与output_image_h设置为0代表不改变图片的分辨率
         Node(
             package='hobot_image_publisher',
@@ -80,8 +84,9 @@ def generate_launch_description():
                     'publish_source_image_h')},
                 {"fps": LaunchConfiguration('publish_fps')},
                 {"is_loop": LaunchConfiguration('publish_is_loop')},
-                {"is_shared_mem": LaunchConfiguration('publish_is_shared_mem')}
+                {"is_shared_mem": LaunchConfiguration('publish_is_shared_mem')},
+                {"is_compressed_img_pub": LaunchConfiguration('publish_is_compressed_img_pub')}
             ],
-            arguments=['--ros-args', '--log-level', 'error']
+            arguments=['--ros-args', '--log-level', 'warn']
         )
     ])

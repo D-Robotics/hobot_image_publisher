@@ -1,5 +1,9 @@
 # Changelog for package hobot_image_publisher
 
+tros_2.0.2 (2024-3-4)
+------------------
+1. 通过非零拷贝通信方式发布的`jpeg`压缩格式图片使用的数据类型由`sensor_msgs::msg::Image`变更为`sensor_msgs::msg::CompressedImage`。
+
 tros_2.0.1 (2023-07-14)
 ------------------
 1. 规范Rdkultra产品名。

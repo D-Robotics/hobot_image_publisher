@@ -498,11 +498,12 @@ PubNode::PubNode(const std::string &node_name,
     if (CheckFormat(image_format_.c_str(), video_list)) {
       is_pub_video = true;
     } else if ("nv12" == image_format_ && is_compressed_img_pub_) {
-      RCLCPP_WARN_STREAM(rclcpp::get_logger("image_pub_node"),
+      RCLCPP_ERROR_STREAM(rclcpp::get_logger("image_pub_node"),
         "Paras are unmatch! image_format_: " << image_format_
         << ", is_compressed_img_pub: " << is_compressed_img_pub_
         << " is only valid for compressed img and reset as False.");
-      is_compressed_img_pub_ = false;
+      rclcpp::shutdown();
+      return;
     }
   }
 
@@ -616,8 +617,13 @@ PubNode::PubNode(const std::string &node_name,
           this->create_publisher_hbmem<hbm_img_msgs::msg::HbmMsg1080P>(
               msg_pub_topic_name_, 10);
     } else {
-      ros_publisher_ =
-          this->create_publisher<sensor_msgs::msg::Image>(msg_pub_topic_name_, 10);
+      if (is_compressed_img_pub_) {
+        ros_publisher_compressed_ =
+            this->create_publisher<sensor_msgs::msg::CompressedImage>(msg_pub_topic_name_, 10);
+      } else {
+        ros_publisher_ =
+            this->create_publisher<sensor_msgs::msg::Image>(msg_pub_topic_name_, 10);
+      }
     }
     timer_ = this->create_wall_timer(std::chrono::milliseconds(1000 / fps_),
                                      std::bind(&PubNode::timer_callback, this));
@@ -669,30 +675,41 @@ void PubNode::timer_callback() {
       publisher_hbmem_->publish(std::move(loanedMsg));
     }
   } else {
-    auto msg = sensor_msgs::msg::Image();
-    msg.height = image_cache_.height;
-    msg.width = image_cache_.width;
     if (is_compressed_img_pub_) {
-      msg.encoding = "jpeg";
+      sensor_msgs::msg::CompressedImage::UniquePtr msg(new sensor_msgs::msg::CompressedImage());
+      msg->header.stamp = this->now();
+      msg->header.frame_id = "default_cam";
+      msg->format = "jpeg";
+      msg->data.resize(image_cache_.data_len);
+      memcpy(&msg->data[0], image_cache_.img_data, image_cache_.data_len);
+      RCLCPP_INFO(this->get_logger(),
+                  "Publish ros compressed image msg, file: %s, format: %s, topic: %s",
+                  image_cache_.image_.c_str(),
+                  msg->format.data(),
+                  msg_pub_topic_name_.data());
+      ros_publisher_compressed_->publish(std::move(msg));
     } else {
+      auto msg = sensor_msgs::msg::Image();
+      msg.height = image_cache_.height;
+      msg.width = image_cache_.width;
       msg.encoding = "nv12";
+      msg.data.resize(image_cache_.data_len);
+      memcpy(&msg.data[0], image_cache_.img_data, image_cache_.data_len);
+      struct timespec time_start = {0, 0};
+      clock_gettime(CLOCK_REALTIME, &time_start);
+      msg.header.stamp.sec = time_start.tv_sec;
+      msg.header.stamp.nanosec = time_start.tv_nsec;
+      msg.header.frame_id = std::to_string(++image_cache_.count_);
+      RCLCPP_INFO(rclcpp::get_logger("image_pub_node"),
+                  "Publish ros image msg, file: %s, encoding: %s, img h: %d, w: "
+                  "%d, topic: %s",
+                  image_cache_.image_.c_str(),
+                  msg.encoding.data(),
+                  msg.height,
+                  msg.width,
+                  msg_pub_topic_name_.data());
+      ros_publisher_->publish(msg);
     }
-    msg.data.resize(image_cache_.data_len);
-    memcpy(&msg.data[0], image_cache_.img_data, image_cache_.data_len);
-    struct timespec time_start = {0, 0};
-    clock_gettime(CLOCK_REALTIME, &time_start);
-    msg.header.stamp.sec = time_start.tv_sec;
-    msg.header.stamp.nanosec = time_start.tv_nsec;
-    msg.header.frame_id = std::to_string(++image_cache_.count_);
-    RCLCPP_INFO(rclcpp::get_logger("image_pub_node"),
-                "Publish ros image msg, file: %s, encoding: %s, img h: %d, w: "
-                "%d, topic: %s",
-                image_cache_.image_.c_str(),
-                msg.encoding.data(),
-                msg.height,
-                msg.width,
-                msg_pub_topic_name_.data());
-    ros_publisher_->publish(msg);
   }
   // 处理循环
   set_pub_index();

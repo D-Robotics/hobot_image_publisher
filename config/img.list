@@ -1,2 +1,2 @@
-/opt/tros/lib/hobot_image_publisher/config/test1.jpg
-/opt/tros/lib/hobot_image_publisher/config/test2.jpg
+./config/test1.jpg
+./config/test2.jpg

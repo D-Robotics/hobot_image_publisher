@@ -24,6 +24,7 @@
 #include "opencv2/imgproc.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/image.hpp"
+#include "sensor_msgs/msg/compressed_image.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -119,6 +120,9 @@ class PubNode : public rclcpp::Node {
   //用于ros方式发布图片
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr ros_publisher_ =
       nullptr;
+  rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr ros_publisher_compressed_ =
+      nullptr;
+
   //用于ros方式发布h26x视频流
   rclcpp::Publisher<img_msgs::msg::H26XFrame>::SharedPtr ros_publisher_h26x_ =
       nullptr;
