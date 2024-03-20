@@ -1,2 +1,2 @@
-/opt/tros/lib/hobot_image_publisher/config/house.mp4
-/opt/tros/lib/hobot_image_publisher/config/sky.mp4
+./config/house.mp4
+./config/sky.mp4
