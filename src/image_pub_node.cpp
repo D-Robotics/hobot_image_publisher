@@ -599,7 +599,7 @@ PubNode::PubNode(const std::string &node_name,
   if (is_pub_video) {  // 发布视频
     if (is_shared_mem_ == true) {
       publisher_hbmem_h26x_ =
-          this->create_publisher_hbmem<hbm_img_msgs::msg::HbmH26XFrame>(
+          this->create_publisher<hbm_img_msgs::msg::HbmH26XFrame>(
               msg_pub_topic_name_, 10);
     } else {
       ros_publisher_h26x_ =
@@ -613,7 +613,7 @@ PubNode::PubNode(const std::string &node_name,
   } else {  // 发布图片
     if (is_shared_mem_ == true) {
       publisher_hbmem_ =
-          this->create_publisher_hbmem<hbm_img_msgs::msg::HbmMsg1080P>(
+          this->create_publisher<hbm_img_msgs::msg::HbmMsg1080P>(
               msg_pub_topic_name_, 10);
     } else {
       ros_publisher_ =

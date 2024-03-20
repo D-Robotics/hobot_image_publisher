@@ -110,10 +110,10 @@ class PubNode : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr timer_;
 
   // 用于shared_mem方式发布图片
-  rclcpp::PublisherHbmem<hbm_img_msgs::msg::HbmMsg1080P>::SharedPtr
+  rclcpp::Publisher<hbm_img_msgs::msg::HbmMsg1080P>::SharedPtr
       publisher_hbmem_ = nullptr;
   // 用于shared_mem方式发布h26x视频流
-  rclcpp::PublisherHbmem<hbm_img_msgs::msg::HbmH26XFrame>::SharedPtr
+  rclcpp::Publisher<hbm_img_msgs::msg::HbmH26XFrame>::SharedPtr
       publisher_hbmem_h26x_ = nullptr;
 
   //用于ros方式发布图片
