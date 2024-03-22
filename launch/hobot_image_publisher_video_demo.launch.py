@@ -3,9 +3,20 @@ from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
 
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from ament_index_python import get_package_share_directory
+import os
+
 def generate_launch_description():
-    
     return LaunchDescription([
+        # 启动零拷贝环境配置node
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(
+                    get_package_share_directory('hobot_shm'),
+                    'launch/hobot_shm.launch.py'))
+        ),
         # 启动视频发布pkg
         Node(
             package='hobot_image_publisher',
