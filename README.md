@@ -144,7 +144,8 @@ img_msgs is a custom message format used to publish ROS type video stream data, 
   ```
 
 - Execute with ros2 launch
-  ```# The images and videos files used in config are provided as examples and should be copied according to the actual installation path
+```
+# The images and videos files used in config are provided as examples and should be copied according to the actual installation path
 # If compiling for a board end (without the --merge-install compilation option), the copy command is cp -r install/PKG_NAME/lib/PKG_NAME/config/., where PKG_NAME is the specific package name
 cp -r install/lib/hobot_image_publisher/config/.
 
@@ -153,18 +154,21 @@ cp -r install/lib/hobot_image_publisher/config/.
 1. Image publishing demonstration, which will start hobot_codec and websocket. The images will be displayed in the browser. Please input "IP address:8000" in the browser to view the effects. Refer to the following demonstration for the effect (for specific usage of websocket, please refer to hobot_websocket)
 ```
 ros2 launch hobot_image_publisher hobot_image_publisher_demo.launch.py
+```
 
 2. Using the hobot_image_publisher node independently, this example reads nv12 format images and publishes the topic as /test_msg. Parameter settings can refer to this launch file
 ```
 ros2 launch hobot_image_publisher hobot_image_publisher.launch.py
+```
 
 3. Video publishing demonstration, which will start hobot_codec and websocket. The videos will be displayed in the browser. Please input "IP address:8000" in the browser to view the effects (since the current X86 version of hobot_codec does not support decoding of h264/h265, this command only supports X3 batch version). Refer to the following demonstration for the effect (for specific usage of websocket, please refer to hobot_websocket). This example reads the video.list file and cyclically publishes videos with the topic as /hbmem_img. Parameter settings can refer to this launch file.
 ```
 ros2 launch hobot_image_publisher hobot_image_publisher_videolist_demo.launch.py
-
+```
 4. Using the hobot_image_publisher node independently, this example reads h264 format images and publishes the topic as /test_h264. Parameter settings can refer to this launch file
 ```
 ros2 launch hobot_image_publisher hobot_image_publisher_video_demo.launch.py
+```
 
 ## Demonstration
 test1.jpg
