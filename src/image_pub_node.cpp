@@ -29,6 +29,8 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
+#include "rcpputils/env.hpp"
+#include "rcutils/env.h"
 
 #define MAX_SIZE 1920 * 1080 * 3
 
@@ -466,6 +468,24 @@ PubNode::PubNode(const std::string &node_name,
     << "\nimage_format: " << image_format_
     << "\nmsg_pub_topic_name: " << msg_pub_topic_name_);
 
+  if (is_shared_mem_ ) {
+    std::string ros_zerocopy_env = rcpputils::get_env_var("RMW_FASTRTPS_USE_QOS_FROM_XML");
+    if (ros_zerocopy_env.empty()) {
+      RCLCPP_ERROR_STREAM(this->get_logger(),
+        "Launching with zero-copy, but env of `RMW_FASTRTPS_USE_QOS_FROM_XML` is not set. "
+        << "Transporting data without zero-copy!");
+    } else {
+      if ("1" == ros_zerocopy_env) {
+        RCLCPP_WARN_STREAM(this->get_logger(), "Enabling zero-copy");
+      } else {
+        RCLCPP_ERROR_STREAM(this->get_logger(),
+          "env of `RMW_FASTRTPS_USE_QOS_FROM_XML` is [" << ros_zerocopy_env
+          << "], which should be set to 1. "
+          << "Data transporting without zero-copy!");
+      }
+    }
+  }
+
   if (image_format_.size() == 0) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
                  "Please add parameter: image_format to your command!\n"
@@ -601,10 +621,10 @@ PubNode::PubNode(const std::string &node_name,
     if (is_shared_mem_ == true) {
       publisher_hbmem_h26x_ =
           this->create_publisher<hbm_img_msgs::msg::HbmH26XFrame>(
-              msg_pub_topic_name_, 10);
+              msg_pub_topic_name_, rclcpp::SensorDataQoS());
     } else {
       ros_publisher_h26x_ =
-          this->create_publisher<img_msgs::msg::H26XFrame>(msg_pub_topic_name_, 10);
+          this->create_publisher<img_msgs::msg::H26XFrame>(msg_pub_topic_name_, rclcpp::SensorDataQoS());
     }
     if (image_format_ == "h264" || image_format_ == "h265") {
       pub_h26x();
@@ -615,7 +635,7 @@ PubNode::PubNode(const std::string &node_name,
     if (is_shared_mem_ == true) {
       publisher_hbmem_ =
           this->create_publisher<hbm_img_msgs::msg::HbmMsg1080P>(
-              msg_pub_topic_name_, 10);
+              msg_pub_topic_name_, rclcpp::SensorDataQoS());
     } else {
       if (is_compressed_img_pub_) {
         ros_publisher_compressed_ =
