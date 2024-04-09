@@ -1,5 +1,11 @@
 # Changelog for package hobot_image_publisher
 
+
+tros_2.1.0 (2024-04-09)
+------------------
+1. 适配ros2 humble零拷贝。
+2. 新增中英双语README。
+
 tros_2.0.2 (2024-3-4)
 ------------------
 1. 通过非零拷贝通信方式发布的`jpeg`压缩格式图片使用的数据类型由`sensor_msgs::msg::Image`变更为`sensor_msgs::msg::CompressedImage`。
