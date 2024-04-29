@@ -63,6 +63,18 @@ elseif(PLATFORM_X86)
     /lib/
   )
   set(SYS_LIB ${OpenCV_LIBS} ${FFMPEG_LIBRARIES})
+elseif(PLATFORM_X5)
+  message("build platform X5")
+  set(SYS_ROOT ${CMAKE_SYSROOT})
+  message("SYS_ROOT is " ${SYS_ROOT})
+  include_directories(
+    ${SYS_ROOT}/usr/include/opencv/
+  )
+  link_directories(
+    ${SYS_ROOT}/usr/lib/hbbpu/
+    ${SYS_ROOT}/usr/lib/
+  )
+  set(SYS_LIB opencv_world ${FFMPEG_LIBRARIES})
 else()
   message("invalid platform, build platform X3 default")
   set(SYS_ROOT ${CMAKE_SYSROOT})
