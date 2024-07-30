@@ -4,7 +4,7 @@
   <name>hobot_image_publisher</name>
   <version>2.1.0</version>
   <description>TogetheROS hobot image publisher</description>
-  <maintainer email="kao.zhu@horizon.ai">zhukao</maintainer>
+  <maintainer email="kao.zhu@d-robotics.cc">zhukao</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
