@@ -1,6 +1,10 @@
 # Changelog for package hobot_image_publisher
 
 
+tros_2.2.0 (2024-08-21)
+------------------
+1. 新增RDK X5平台适配。
+
 tros_2.1.0 (2024-04-09)
 ------------------
 1. 适配ros2 humble零拷贝。
