@@ -24,9 +24,9 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
 ## 开发环境
 
 - 编程语言: C/C++
-- 开发平台: X3/X86
-- 系统版本：Ubuntu 20.04
-- 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
+- 开发平台: X3/X5/X86
+- 系统版本：Ubuntu 20.04/Ubuntu 22.04
+- 编译工具链:Linux GCC 9.3.0/Linaro GCC 11.4.0
 
 ## 编译
 
@@ -100,6 +100,8 @@ img_msgs为自定义消息格式，用于发布ros类型的视频流数据，定
 | is_loop            | 是否进行循环发布                       | bool        | True/False                                 | 否       | True |
 | is_shared_mem      | 是否使用share_mem的方式通信            | bool        | True/False                                      | 否       | True |
 | is_compressed_img_pub | 是否直接发布jpeg/jpg/png格式的压缩图片 | bool     | True：直接发布压缩图片；False：将图片解码成NV12格式后发布 | 否       | False |
+| pub_encoding | 发布的编码类型 | std::string     | nv12/bgr/rgb | 否       | nv12 |
+| pub_name_mode | 发布frame_id的配置 | int     | 0：frame_id设置默认"default_cam"；1：frame_id设置为与发布图片同名 | 否       | 0 |
 
 ## 注意事项
 - 如需使用list指定图片或视频文件，请编写config下的img.list或video.list，注意list文件编写格式:一个文件路径为一行。

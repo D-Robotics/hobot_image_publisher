@@ -24,9 +24,9 @@ img_msgs is a custom message format used to publish ROS type video stream data, 
 ## Development Environment
 
 - Programming Language: C/C++
-- Development Platform: X3/X86
-- System Version: Ubuntu 20.04
-- Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 9.3.0
+- Development Platform: X3/X5/X86
+- System Version: Ubuntu 20.04/22.04
+- Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 11.4.0
 
 ## Compilation
 
@@ -97,7 +97,11 @@ img_msgs is a custom message format used to publish ROS type video stream data, 
 | fps                | Publishing Frame Rate                   | int         | [1, 30], no frame rate control outside this range               | No       | 10 |
 | is_loop            | Whether to Publish in a Loop            | bool        | True/False                                                     | No       | True |
 | is_shared_mem      | Whether to Use Share Memory for Communication | bool | True/False                                        | No       | True |
-| is_compressed_img_pub | Whether to Directly Publish Compressed jpeg/jpg/png Images | bool | True: Publish compressed images directly; False: Decode images to NV12 format before publishing | No       | False |## Notice
+| is_compressed_img_pub | Whether to Directly Publish Compressed jpeg/jpg/png Images | bool | True: Publish compressed images directly; False: Decode images to NV12 format before publishing | No       | False |
+| pub_encoding | Publish Encoding | std::string | nv12/bgr/rgb | No       | nv12 |
+| pub_name_mode | Pubilsh name mode | int | 0: Set frame_id = "default_cam"; 1: Set frame_id name as published image name | No       | 0 |
+
+## Notice
 - If you need to specify image or video files using a list, please write img.list or video.list under config folder. Pay attention to the format of the list file: one file path per line.
 - When using a list file, the file format in the list needs to be consistent with the parameter image_format. All images/videos in the list should have the same resolution, otherwise decoding will fail.
 - When publishing nv12 images using a list file, the resolution of images in the list needs to be consistent with the input resolution.
