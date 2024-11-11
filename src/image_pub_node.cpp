@@ -186,7 +186,8 @@ void processImage(ImageCache &image_cache,
                   const int32_t &source_image_w,
                   const int32_t &source_image_h,
                   const std::string &image_format,
-                  bool is_compressed_img_pub) {
+                  bool is_compressed_img_pub,
+                  const std::string &pub_encoding) {
   image_cache.image_ = image_source;
   if (access(image_cache.image_.c_str(), R_OK) == -1) {
     RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
@@ -267,22 +268,31 @@ void processImage(ImageCache &image_cache,
     image_cache.img_data = image_cache.jpeg.data();
     image_cache.data_len = image_cache.jpeg.size();
   } else {
-    cv::Mat &nv12_mat = image_cache.nv12_mat;
-    if (image_format == "nv12" &&
-        (ori_width == pad_width && ori_height == pad_height)) {
-      nv12_mat = nv12_tmp;
-    } else {
-      auto ret = BGRToNv12(pad_frame, nv12_mat);
-      if (ret) {
-        RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
-                    "Image: %s get nv12 image failed",
-                    image_source.c_str());
-        rclcpp::shutdown();
-        return;
+    if (pub_encoding == "nv12") {
+      cv::Mat &nv12_mat = image_cache.nv12_mat;
+      if (image_format == "nv12" &&
+          (ori_width == pad_width && ori_height == pad_height)) {
+        nv12_mat = nv12_tmp;
+      } else {
+        auto ret = BGRToNv12(pad_frame, nv12_mat);
+        if (ret) {
+          RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+                      "Image: %s get nv12 image failed",
+                      image_source.c_str());
+          rclcpp::shutdown();
+          return;
+        }
       }
+      image_cache.img_data = image_cache.nv12_mat.data;
+      image_cache.data_len = pad_width * pad_height * 3 / 2;
+    } else if (pub_encoding == "bgr") {
+      image_cache.img_data = bgr_mat.data;
+      image_cache.data_len = pad_width * pad_height * 3;
+    } else if (pub_encoding == "rgb") {
+      cv::cvtColor(bgr_mat, bgr_mat, cv::COLOR_BGR2RGB);
+      image_cache.img_data = bgr_mat.data;
+      image_cache.data_len = pad_width * pad_height * 3;
     }
-    image_cache.img_data = image_cache.nv12_mat.data;
-    image_cache.data_len = pad_width * pad_height * 3 / 2;
   }
   image_cache.width = pad_width;
   image_cache.height = pad_height;
@@ -432,6 +442,8 @@ PubNode::PubNode(const std::string &node_name,
   this->declare_parameter<bool>("is_compressed_img_pub", is_compressed_img_pub_);
   this->declare_parameter<std::string>("image_source", image_source_);
   this->declare_parameter<std::string>("image_format", image_format_);
+  this->declare_parameter<std::string>("pub_encoding", pub_encoding_);
+  this->declare_parameter<int32_t>("pub_name_mode", pub_name_mode_);
   this->declare_parameter<std::string>("msg_pub_topic_name",
                                        msg_pub_topic_name_);
 
@@ -445,6 +457,8 @@ PubNode::PubNode(const std::string &node_name,
   this->get_parameter<bool>("is_loop", is_loop_);
   this->get_parameter<bool>("is_compressed_img_pub", is_compressed_img_pub_);
   this->get_parameter<std::string>("image_format", image_format_);
+  this->get_parameter<std::string>("pub_encoding", pub_encoding_);
+  this->get_parameter<int32_t>("pub_name_mode", pub_name_mode_);
   this->get_parameter<std::string>("msg_pub_topic_name", msg_pub_topic_name_);
 
   if (msg_pub_topic_name_.size() == 0) {
@@ -466,6 +480,8 @@ PubNode::PubNode(const std::string &node_name,
     << "\nis_loop: " << is_loop_
     << "\nis_compressed_img_pub: " << is_compressed_img_pub_
     << "\nimage_format: " << image_format_
+    << "\npub_encoding: " << pub_encoding_
+    << "\pub_name_mode: " << pub_name_mode_
     << "\nmsg_pub_topic_name: " << msg_pub_topic_name_);
 
   if (is_shared_mem_ ) {
@@ -551,7 +567,8 @@ PubNode::PubNode(const std::string &node_name,
                      source_image_w_,
                      source_image_h_,
                      image_format_,
-                     is_compressed_img_pub_);
+                     is_compressed_img_pub_,
+                     pub_encoding_);
       }
     } else if (file_extension == "list") {
       // 路径为list文件
@@ -663,7 +680,8 @@ void PubNode::timer_callback() {
                  source_image_w_,
                  source_image_h_,
                  image_format_,
-                 is_compressed_img_pub_);
+                 is_compressed_img_pub_,
+                 pub_encoding_);
   }
   if (is_shared_mem_) {
     auto loanedMsg = publisher_hbmem_->borrow_loaned_message();
@@ -674,7 +692,7 @@ void PubNode::timer_callback() {
       if (is_compressed_img_pub_) {
         memcpy(msg.encoding.data(), "jpeg", strlen("jpeg"));
       } else {
-        memcpy(msg.encoding.data(), "nv12", strlen("nv12"));
+        memcpy(msg.encoding.data(), pub_encoding_.c_str(), strlen(pub_encoding_.c_str()));
       }
       memcpy(&msg.data[0], image_cache_.img_data, image_cache_.data_len);
       struct timespec time_start = {0, 0};
@@ -699,6 +717,9 @@ void PubNode::timer_callback() {
       sensor_msgs::msg::CompressedImage::UniquePtr msg(new sensor_msgs::msg::CompressedImage());
       msg->header.stamp = this->now();
       msg->header.frame_id = "default_cam";
+      if (pub_name_mode_ == 1) {
+        msg->header.frame_id = image_cache_.image_;
+      }
       msg->format = "jpeg";
       msg->data.resize(image_cache_.data_len);
       memcpy(&msg->data[0], image_cache_.img_data, image_cache_.data_len);
@@ -712,14 +733,17 @@ void PubNode::timer_callback() {
       auto msg = sensor_msgs::msg::Image();
       msg.height = image_cache_.height;
       msg.width = image_cache_.width;
-      msg.encoding = "nv12";
+      msg.encoding = pub_encoding_;
       msg.data.resize(image_cache_.data_len);
       memcpy(&msg.data[0], image_cache_.img_data, image_cache_.data_len);
       struct timespec time_start = {0, 0};
       clock_gettime(CLOCK_REALTIME, &time_start);
       msg.header.stamp.sec = time_start.tv_sec;
       msg.header.stamp.nanosec = time_start.tv_nsec;
-      msg.header.frame_id = std::to_string(++image_cache_.count_);
+      msg.header.frame_id = image_cache_.image_;
+      if (pub_name_mode_ == 1) {
+        msg.header.frame_id = image_cache_.image_;
+      }
       RCLCPP_INFO(rclcpp::get_logger("image_pub_node"),
                   "Publish ros image msg, file: %s, encoding: %s, img h: %d, w: "
                   "%d, topic: %s",

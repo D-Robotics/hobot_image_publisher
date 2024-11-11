@@ -67,6 +67,14 @@ def generate_launch_description():
             'publish_is_compressed_img_pub',
             default_value='False',
             description='publish jpeg/jpg/png imgs using CompressedImage'),
+        DeclareLaunchArgument(
+            'publish_encoding',
+            default_value='nv12',
+            description='publish nv12/bgr/rgb encoding'),
+        DeclareLaunchArgument(
+            'publish_name_mode',
+            default_value='0',
+            description='publish frame id 0:defalt/1:file name'),
         # 启动零拷贝环境配置node
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -95,7 +103,8 @@ def generate_launch_description():
                 {"fps": LaunchConfiguration('publish_fps')},
                 {"is_loop": LaunchConfiguration('publish_is_loop')},
                 {"is_shared_mem": LaunchConfiguration('publish_is_shared_mem')},
-                {"is_compressed_img_pub": LaunchConfiguration('publish_is_compressed_img_pub')}
+                {"is_compressed_img_pub": LaunchConfiguration('publish_is_compressed_img_pub')},
+                {"pub_encoding": LaunchConfiguration('publish_encoding')}
             ],
             arguments=['--ros-args', '--log-level', 'warn']
         )
