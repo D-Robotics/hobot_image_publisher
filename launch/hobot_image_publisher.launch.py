@@ -101,6 +101,7 @@ def generate_launch_description():
                 {"source_image_h": LaunchConfiguration(
                     'publish_source_image_h')},
                 {"fps": LaunchConfiguration('publish_fps')},
+                {"pub_name_mode": LaunchConfiguration('publish_name_mode')},
                 {"is_loop": LaunchConfiguration('publish_is_loop')},
                 {"is_shared_mem": LaunchConfiguration('publish_is_shared_mem')},
                 {"is_compressed_img_pub": LaunchConfiguration('publish_is_compressed_img_pub')},
