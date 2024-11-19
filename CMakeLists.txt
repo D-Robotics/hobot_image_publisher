@@ -25,6 +25,7 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(hbm_img_msgs REQUIRED)
 find_package(img_msgs REQUIRED)
+find_package(OpenCV 4 REQUIRED)
 
 set(FFMPEG_LIBRARIES avformat avutil avcodec)
 
@@ -39,7 +40,7 @@ if(PLATFORM_X3)
     ${SYS_ROOT}/usr/lib/hbbpu/
     ${SYS_ROOT}/usr/lib/
   )
-  set(SYS_LIB hbmem opencv_world ${FFMPEG_LIBRARIES})
+  set(SYS_LIB hbmem ${FFMPEG_LIBRARIES})
 elseif(PLATFORM_Rdkultra)
   message("build platform Rdkultra")
   set(SYS_ROOT ${CMAKE_SYSROOT})
@@ -51,7 +52,7 @@ elseif(PLATFORM_Rdkultra)
     ${SYS_ROOT}/usr/lib/hbbpu/
     ${SYS_ROOT}/usr/lib/
   )
-  set(SYS_LIB hbmem opencv_world ${FFMPEG_LIBRARIES})
+  set(SYS_LIB hbmem ${FFMPEG_LIBRARIES})
 elseif(PLATFORM_X86)
   message("build platform X86")
   find_package(OpenCV 4 REQUIRED)
@@ -74,7 +75,7 @@ elseif(PLATFORM_X5)
     ${SYS_ROOT}/usr/lib/hbbpu/
     ${SYS_ROOT}/usr/lib/
   )
-  set(SYS_LIB opencv_world ${FFMPEG_LIBRARIES})
+  set(SYS_LIB ${FFMPEG_LIBRARIES})
 else()
   message("invalid platform, build platform X3 default")
   set(SYS_ROOT ${CMAKE_SYSROOT})
@@ -86,7 +87,7 @@ else()
     ${SYS_ROOT}/usr/lib/hbbpu/
     ${SYS_ROOT}/usr/lib/
   )
-  set(SYS_LIB hbmem opencv_world ${FFMPEG_LIBRARIES})
+  set(SYS_LIB hbmem ${FFMPEG_LIBRARIES})
   set(PLATFORM_X3 ON)
 endif()
 
@@ -101,6 +102,7 @@ ament_target_dependencies(
   sensor_msgs
   hbm_img_msgs
   img_msgs
+  OpenCV
 )
 
 target_link_libraries(hobot_image_pub ${SYS_LIB})
