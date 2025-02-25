@@ -76,6 +76,17 @@ elseif(PLATFORM_X5)
     ${SYS_ROOT}/usr/lib/
   )
   set(SYS_LIB ${FFMPEG_LIBRARIES})
+elseif(PLATFORM_S100)
+  message("build platform S100")
+  set(SYS_ROOT ${CMAKE_SYSROOT})
+  message("SYS_ROOT is " ${SYS_ROOT})
+  include_directories(
+    ${SYS_ROOT}/usr/include/opencv/
+  )
+  link_directories(
+    ${SYS_ROOT}/usr/hobot/lib/
+  )
+  set(SYS_LIB ${FFMPEG_LIBRARIES})
 else()
   message("invalid platform, build platform X3 default")
   set(SYS_ROOT ${CMAKE_SYSROOT})
