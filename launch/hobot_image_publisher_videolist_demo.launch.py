@@ -53,7 +53,7 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(
                 os.path.join(
                     get_package_share_directory('hobot_codec'),
-                    'launch/hobot_codec.launch.py')),
+                    'launch/hobot_codec_decode.launch.py')),
             launch_arguments={
                 'codec_in_mode': 'shared_mem',
                 'codec_in_format': 'h264',
@@ -68,7 +68,7 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(
                 os.path.join(
                     get_package_share_directory('hobot_codec'),
-                    'launch/hobot_codec.launch.py')),
+                    'launch/hobot_codec_encode.launch.py')),
             launch_arguments={
                 'codec_in_mode': 'shared_mem',
                 'codec_in_format': 'nv12',
