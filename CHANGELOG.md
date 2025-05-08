@@ -1,5 +1,9 @@
 # Changelog for package hobot_image_publisher
 
+tros_2.2.2 (2025-05-08)
+------------------
+1. 支持`RDK S100`平台。
+
 tros_2.2.1 (2024-11-11)
 ------------------
 1. 新增配置：发布bgr/rgb格式消息数据。
