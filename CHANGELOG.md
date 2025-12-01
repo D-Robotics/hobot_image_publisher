@@ -1,5 +1,8 @@
 # Changelog for package hobot_image_publisher
-
+tros_2.2.3 (2025-12-01)
+------------------
+1. 支持`RDK S600`平台。
+2. 
 tros_2.2.2 (2025-05-08)
 ------------------
 1. 支持`RDK S100`平台。
