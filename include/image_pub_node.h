@@ -18,6 +18,7 @@
 
 #include "hbm_img_msgs/msg/hbm_h26_x_frame.hpp"
 #include "hbm_img_msgs/msg/hbm_msg1080_p.hpp"
+#include "hbm_img_msgs/msg/hbm_msg2160_p.hpp"
 #include "img_msgs/msg/h26_x_frame.hpp"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/imgcodecs.hpp"
@@ -81,6 +82,9 @@ class PubNode : public rclcpp::Node {
  public:
   PubNode(const std::string &node_name,
           const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
+  // component 容器加载入口
+  explicit PubNode(const rclcpp::NodeOptions &options)
+      : PubNode("hobot_image_pub", options) {}
   ~PubNode() override;
 
  private:
@@ -115,6 +119,11 @@ class PubNode : public rclcpp::Node {
   // 用于shared_mem方式发布图片
   rclcpp::Publisher<hbm_img_msgs::msg::HbmMsg1080P>::SharedPtr
       publisher_hbmem_ = nullptr;
+  // 用于shared_mem方式发布2160P(3840x2160)图片
+  rclcpp::Publisher<hbm_img_msgs::msg::HbmMsg2160P>::SharedPtr
+      publisher_hbmem_2160_ = nullptr;
+  // 共享内存消息档位：1080P（默认）| 2160P
+  std::string resolution_ = "1080P";
   // 用于shared_mem方式发布h26x视频流
   rclcpp::Publisher<hbm_img_msgs::msg::HbmH26XFrame>::SharedPtr
       publisher_hbmem_h26x_ = nullptr;
