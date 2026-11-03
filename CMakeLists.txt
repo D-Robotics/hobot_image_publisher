@@ -21,6 +21,7 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(hbm_img_msgs REQUIRED)
@@ -121,6 +122,7 @@ src/image_pub_node.cpp
 ament_target_dependencies(
   hobot_image_pub
   rclcpp
+  rclcpp_components
   sensor_msgs
   hbm_img_msgs
   img_msgs
@@ -128,6 +130,31 @@ ament_target_dependencies(
 )
 
 target_link_libraries(hobot_image_pub ${SYS_LIB})
+
+# component 形式加载
+add_library(${PROJECT_NAME}_component SHARED
+src/image_pub_node.cpp
+)
+ament_target_dependencies(${PROJECT_NAME}_component
+  rclcpp
+  rclcpp_components
+  sensor_msgs
+  hbm_img_msgs
+  img_msgs
+  OpenCV
+)
+target_link_libraries(${PROJECT_NAME}_component ${SYS_LIB})
+rclcpp_components_register_node(${PROJECT_NAME}_component
+  PLUGIN "PubNode"
+  EXECUTABLE hobot_image_pub_component)
+
+# Install component library
+install(
+  TARGETS ${PROJECT_NAME}_component
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
 
 include_directories(include
 ${PROJECT_SOURCE_DIR}

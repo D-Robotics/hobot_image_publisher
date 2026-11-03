@@ -239,6 +239,11 @@ void processImage(ImageCache &image_cache,
   int32_t ori_height = (image_format == "nv12") ? source_image_h : bgr_mat.rows;
   int32_t pad_width = (output_image_w == 0) ? ori_width : output_image_w;
   int32_t pad_height = (output_image_h == 0) ? ori_height : output_image_h;
+  // nv12 裸帧输出时宽需 16 对齐、高需偶数（venc 按对齐步长读取，否则画面斜切错乱）
+  if (pub_encoding == "nv12" && !is_compressed_img_pub) {
+    pad_width = pad_width & ~0xF;
+    pad_height = pad_height & ~0x1;
+  }
   if ((pad_width < 0) || (pad_height < 0)) {
     RCLCPP_ERROR(
         rclcpp::get_logger("image_pub_node"),
@@ -446,6 +451,7 @@ PubNode::PubNode(const std::string &node_name,
   this->declare_parameter<int32_t>("pub_name_mode", pub_name_mode_);
   this->declare_parameter<std::string>("msg_pub_topic_name",
                                        msg_pub_topic_name_);
+  this->declare_parameter<std::string>("resolution", resolution_);
 
   this->get_parameter<std::string>("image_source", image_source_);
   this->get_parameter<int32_t>("source_image_w", source_image_w_);
@@ -460,6 +466,7 @@ PubNode::PubNode(const std::string &node_name,
   this->get_parameter<std::string>("pub_encoding", pub_encoding_);
   this->get_parameter<int32_t>("pub_name_mode", pub_name_mode_);
   this->get_parameter<std::string>("msg_pub_topic_name", msg_pub_topic_name_);
+  this->get_parameter<std::string>("resolution", resolution_);
 
   if (msg_pub_topic_name_.size() == 0) {
     if (is_shared_mem_ == true) {
@@ -475,6 +482,7 @@ PubNode::PubNode(const std::string &node_name,
     << "\nsource_image_h: " << source_image_h_
     << "\noutput_image_w: " << output_image_w_
     << "\noutput_image_h: " << output_image_h_
+    << "\nresolution: " << resolution_
     << "\nfps: " << fps_
     << "\nis_shared_mem: " << is_shared_mem_
     << "\nis_loop: " << is_loop_
@@ -650,9 +658,15 @@ PubNode::PubNode(const std::string &node_name,
     }
   } else {  // 发布图片
     if (is_shared_mem_ == true) {
-      publisher_hbmem_ =
-          this->create_publisher<hbm_img_msgs::msg::HbmMsg1080P>(
-              msg_pub_topic_name_, rclcpp::SensorDataQoS());
+      if (resolution_ == "2160P") {
+        publisher_hbmem_2160_ =
+            this->create_publisher<hbm_img_msgs::msg::HbmMsg2160P>(
+                msg_pub_topic_name_, rclcpp::SensorDataQoS());
+      } else {
+        publisher_hbmem_ =
+            this->create_publisher<hbm_img_msgs::msg::HbmMsg1080P>(
+                msg_pub_topic_name_, rclcpp::SensorDataQoS());
+      }
     } else {
       if (is_compressed_img_pub_) {
         ros_publisher_compressed_ =
@@ -683,7 +697,52 @@ void PubNode::timer_callback() {
                  is_compressed_img_pub_,
                  pub_encoding_);
   }
-  if (is_shared_mem_) {
+  if (is_shared_mem_ && publisher_hbmem_2160_ != nullptr) {
+    auto t0 = std::chrono::steady_clock::now();
+    auto loanedMsg = publisher_hbmem_2160_->borrow_loaned_message();
+    auto borrow_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - t0).count();
+    if (!loanedMsg.is_valid()) {
+      RCLCPP_WARN(rclcpp::get_logger("image_pub_node"),
+                  "borrow loaned msg FAILED (%lld ms), skip this tick",
+                  (long long)borrow_ms);
+      return;
+    }
+    if (borrow_ms > 20) {
+      RCLCPP_WARN(rclcpp::get_logger("image_pub_node"),
+                  "borrow loaned msg slow: %lld ms", (long long)borrow_ms);
+    }
+    if (loanedMsg.is_valid()) {
+      auto &msg = loanedMsg.get();
+      msg.height = image_cache_.height;
+      msg.width = image_cache_.width;
+      memcpy(msg.encoding.data(), pub_encoding_.c_str(), pub_encoding_.length());
+      if (image_cache_.data_len <= msg.data.size()) {
+        memcpy(&msg.data[0], image_cache_.img_data, image_cache_.data_len);
+      } else {
+        RCLCPP_ERROR(rclcpp::get_logger("image_pub_node"),
+                     "img size %d exceeds HbmMsg2160P buffer, drop it",
+                     image_cache_.data_len);
+        return;
+      }
+      struct timespec time_start = {0, 0};
+      clock_gettime(CLOCK_REALTIME, &time_start);
+      msg.time_stamp.sec = time_start.tv_sec;
+      msg.time_stamp.nanosec = time_start.tv_nsec;
+      msg.index = ++image_cache_.count_;
+      msg.data_size = image_cache_.data_len;
+      RCLCPP_INFO(rclcpp::get_logger("image_pub_node"),
+                  "Publish hbm 2160p image msg,file: %s, encoding: %s, img h: %d, w: "
+                  "%d, size: %d, topic: %s",
+                  image_cache_.image_.c_str(),
+                  msg.encoding.data(),
+                  msg.height,
+                  msg.width,
+                  msg.data_size,
+                  msg_pub_topic_name_.data());
+      publisher_hbmem_2160_->publish(std::move(loanedMsg));
+    }
+  } else if (is_shared_mem_) {
     auto loanedMsg = publisher_hbmem_->borrow_loaned_message();
     if (loanedMsg.is_valid()) {
       auto &msg = loanedMsg.get();
@@ -1025,3 +1084,6 @@ void PubNode::pub_H264FromMP4() {
     set_pub_index();
   } while (is_loop_ && rclcpp::ok());
 }
+
+#include "rclcpp_components/register_node_macro.hpp"
+RCLCPP_COMPONENTS_REGISTER_NODE(PubNode)

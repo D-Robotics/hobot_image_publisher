@@ -75,6 +75,10 @@ def generate_launch_description():
             'publish_name_mode',
             default_value='0',
             description='publish frame id 0:defalt/1:file name'),
+        DeclareLaunchArgument(
+            'publish_resolution',
+            default_value='1080P',
+            description='shared mem msg type: 1080P | 2160P (3840x2160)'),
         # 启动零拷贝环境配置node
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -96,6 +100,7 @@ def generate_launch_description():
                     'publish_output_image_w')},
                 {"output_image_h": LaunchConfiguration(
                     'publish_output_image_h')},
+                {"resolution": LaunchConfiguration('publish_resolution')},
                 {"source_image_w": LaunchConfiguration(
                     'publish_source_image_w')},
                 {"source_image_h": LaunchConfiguration(
